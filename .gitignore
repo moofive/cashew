@@ -1,0 +1,12 @@
+*.pyc
+*.egg-info
+output/
+output-long/
+output-site/
+.cache/
+build
+dist
+cover/
+.bugs.done
+.coverage
+bugs
