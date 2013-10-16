@@ -10,3 +10,4 @@ cover/
 .bugs.done
 .coverage
 bugs
+.dexy/
