@@ -18,11 +18,6 @@ You identify a subclass and/or a preconfigured bundle of settings by an alias,
 and settings can further be modified at runtime to allow for multiple levels of
 configuration.
 
-
-== Preview
-
-quickstart of final example showing all features...
-
 == Usage Guide
 
 === Creating a Base Class
