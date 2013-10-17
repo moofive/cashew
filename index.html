@@ -916,12 +916,12 @@ we call the <code>register_plugin</code> method.</p>
             <span class="tok-k">if</span> <span class="tok-s">&quot;:&quot;</span> <span class="tok-ow">in</span> <span class="tok-n">class_or_class_name</span><span class="tok-p">:</span>
                 <span class="tok-n">mod_name</span><span class="tok-p">,</span> <span class="tok-n">class_name</span> <span class="tok-o">=</span> <span class="tok-n">class_or_class_name</span><span class="tok-o">.</span><span class="tok-n">split</span><span class="tok-p">(</span><span class="tok-s">&quot;:&quot;</span><span class="tok-p">)</span>
 
-                <span class="tok-c"># load the module</span>
                 <span class="tok-k">if</span> <span class="tok-ow">not</span> <span class="tok-n">mod_name</span> <span class="tok-ow">in</span> <span class="tok-n">sys</span><span class="tok-o">.</span><span class="tok-n">modules</span><span class="tok-p">:</span>
                     <span class="tok-nb">__import__</span><span class="tok-p">(</span><span class="tok-n">mod_name</span><span class="tok-p">)</span>
-                <span class="tok-n">mod</span> <span class="tok-o">=</span> <span class="tok-n">sys</span><span class="tok-o">.</span><span class="tok-n">modules</span><span class="tok-p">[</span><span class="tok-n">mod_name</span><span class="tok-p">]</span>
 
+                <span class="tok-n">mod</span> <span class="tok-o">=</span> <span class="tok-n">sys</span><span class="tok-o">.</span><span class="tok-n">modules</span><span class="tok-p">[</span><span class="tok-n">mod_name</span><span class="tok-p">]</span>
                 <span class="tok-k">return</span> <span class="tok-n">mod</span><span class="tok-o">.</span><span class="tok-n">__dict__</span><span class="tok-p">[</span><span class="tok-n">class_name</span><span class="tok-p">]</span>
+
             <span class="tok-k">else</span><span class="tok-p">:</span>
                 <span class="tok-k">return</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">load_class_from_locals</span><span class="tok-p">(</span><span class="tok-n">class_or_class_name</span><span class="tok-p">)</span>
 
@@ -967,13 +967,202 @@ establish a mapping between class names and class objects in a
 </code></pre>
 </div>
 </div>
+<div class="paragraph">
+<p>You&#8217;ll need to implement this one, by default it&#8217;s disabled:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">load_class_from_locals</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-n">class_name</span><span class="tok-p">):</span>
+        <span class="tok-k">raise</span> <span class="tok-ne">Exception</span><span class="tok-p">(</span><span class="tok-s">&quot;not implemented&quot;</span><span class="tok-p">)</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s the <code>register_plugin</code> source again since it&#8217;s been a while since we&#8217;ve
+seen it:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">register_plugin</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-n">alias_or_aliases</span><span class="tok-p">,</span> <span class="tok-n">class_or_class_name</span><span class="tok-p">,</span> <span class="tok-n">settings</span><span class="tok-p">):</span>
+        <span class="tok-n">aliases</span> <span class="tok-o">=</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">standardize_alias_or_aliases</span><span class="tok-p">(</span><span class="tok-n">alias_or_aliases</span><span class="tok-p">)</span>
+        <span class="tok-n">klass</span> <span class="tok-o">=</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">get_reference_to_class</span><span class="tok-p">(</span><span class="tok-n">class_or_class_name</span><span class="tok-p">)</span>
+
+        <span class="tok-c"># Ensure &#39;aliases&#39; and &#39;help&#39; settings are set.</span>
+        <span class="tok-n">settings</span><span class="tok-p">[</span><span class="tok-s">&#39;aliases&#39;</span><span class="tok-p">]</span> <span class="tok-o">=</span> <span class="tok-p">(</span><span class="tok-s">&#39;aliases&#39;</span><span class="tok-p">,</span> <span class="tok-n">aliases</span><span class="tok-p">)</span>
+        <span class="tok-k">if</span> <span class="tok-ow">not</span> <span class="tok-n">settings</span><span class="tok-o">.</span><span class="tok-n">has_key</span><span class="tok-p">(</span><span class="tok-s">&#39;help&#39;</span><span class="tok-p">):</span>
+            <span class="tok-n">docstring</span> <span class="tok-o">=</span> <span class="tok-n">klass</span><span class="tok-o">.</span><span class="tok-n">check_docstring</span><span class="tok-p">()</span>
+            <span class="tok-n">settings</span><span class="tok-p">[</span><span class="tok-s">&#39;help&#39;</span><span class="tok-p">]</span> <span class="tok-o">=</span> <span class="tok-p">(</span><span class="tok-s">&quot;Helpstring for plugin.&quot;</span><span class="tok-p">,</span> <span class="tok-n">docstring</span><span class="tok-p">)</span>
+
+        <span class="tok-c"># Create the tuple which will be registered for the plugin.</span>
+        <span class="tok-n">class_info</span> <span class="tok-o">=</span> <span class="tok-p">(</span><span class="tok-n">class_or_class_name</span><span class="tok-p">,</span> <span class="tok-n">settings</span><span class="tok-p">)</span>
+
+        <span class="tok-c"># Register the class_info tuple for each alias.</span>
+        <span class="tok-k">for</span> <span class="tok-n">alias</span> <span class="tok-ow">in</span> <span class="tok-n">aliases</span><span class="tok-p">:</span>
+            <span class="tok-k">if</span> <span class="tok-nb">isinstance</span><span class="tok-p">(</span><span class="tok-n">class_or_class_name</span><span class="tok-p">,</span> <span class="tok-nb">type</span><span class="tok-p">):</span>
+                <span class="tok-n">modname</span> <span class="tok-o">=</span> <span class="tok-n">class_or_class_name</span><span class="tok-o">.</span><span class="tok-n">__module__</span>
+                <span class="tok-n">alias</span> <span class="tok-o">=</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">apply_prefix</span><span class="tok-p">(</span><span class="tok-n">modname</span><span class="tok-p">,</span> <span class="tok-n">alias</span><span class="tok-p">)</span>
+
+            <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">plugins</span><span class="tok-p">[</span><span class="tok-n">alias</span><span class="tok-p">]</span> <span class="tok-o">=</span> <span class="tok-n">class_info</span>
+
+        <span class="tok-c"># Register any settings defined for other classes.</span>
+        <span class="tok-k">if</span> <span class="tok-nb">hasattr</span><span class="tok-p">(</span><span class="tok-n">klass</span><span class="tok-p">,</span> <span class="tok-s">&#39;_other_class_settings&#39;</span><span class="tok-p">)</span> <span class="tok-ow">and</span> <span class="tok-n">klass</span><span class="tok-o">.</span><span class="tok-n">_other_class_settings</span><span class="tok-p">:</span>
+            <span class="tok-n">PluginMeta</span><span class="tok-o">.</span><span class="tok-n">_store_other_class_settings</span><span class="tok-o">.</span><span class="tok-n">update</span><span class="tok-p">(</span><span class="tok-n">klass</span><span class="tok-o">.</span><span class="tok-n">_other_class_settings</span><span class="tok-p">)</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The next block of text adds <code>aliases</code> and <code>help</code> settings so we can count on
+these always being available. You need to provide a docstring which will be
+used for the <em>help</em> setting.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">check_docstring</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">):</span>
+        <span class="tok-sd">&quot;&quot;&quot;</span>
+<span class="tok-sd">        Asserts that the class has a docstring, returning it if successful.</span>
+<span class="tok-sd">        &quot;&quot;&quot;</span>
+        <span class="tok-n">docstring</span> <span class="tok-o">=</span> <span class="tok-n">inspect</span><span class="tok-o">.</span><span class="tok-n">getdoc</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">)</span>
+        <span class="tok-k">if</span> <span class="tok-ow">not</span> <span class="tok-n">docstring</span><span class="tok-p">:</span>
+            <span class="tok-n">breadcrumbs</span> <span class="tok-o">=</span> <span class="tok-s">&quot; -&gt; &quot;</span><span class="tok-o">.</span><span class="tok-n">join</span><span class="tok-p">(</span><span class="tok-n">t</span><span class="tok-o">.</span><span class="tok-n">__name__</span> <span class="tok-k">for</span> <span class="tok-n">t</span> <span class="tok-ow">in</span> <span class="tok-n">inspect</span><span class="tok-o">.</span><span class="tok-n">getmro</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">)[:</span><span class="tok-o">-</span><span class="tok-mi">1</span><span class="tok-p">][::</span><span class="tok-o">-</span><span class="tok-mi">1</span><span class="tok-p">])</span>
+            <span class="tok-n">msg</span> <span class="tok-o">=</span> <span class="tok-s">&quot;docstring required for plugin &#39;</span><span class="tok-si">%s</span><span class="tok-s">&#39; (</span><span class="tok-si">%s</span><span class="tok-s">, defined in </span><span class="tok-si">%s</span><span class="tok-s">)&quot;</span>
+            <span class="tok-n">args</span> <span class="tok-o">=</span> <span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">__name__</span><span class="tok-p">,</span> <span class="tok-n">breadcrumbs</span><span class="tok-p">,</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">__module__</span><span class="tok-p">)</span>
+            <span class="tok-k">raise</span> <span class="tok-n">InternalCashewException</span><span class="tok-p">(</span><span class="tok-n">msg</span> <span class="tok-o">%</span> <span class="tok-n">args</span><span class="tok-p">)</span>
+        <span class="tok-k">return</span> <span class="tok-n">docstring</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Once the settings are normalized, then we are ready to actually add class
+information to the plugins dictionary using the aliases as keys.</p>
+</div>
+<div class="paragraph">
+<p>There&#8217;s an option to add namespacing to plugins by implementing a different
+<code>apply_prefix</code> class method in your plugin base class:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">apply_prefix</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-n">modname</span><span class="tok-p">,</span> <span class="tok-n">alias</span><span class="tok-p">):</span>
+        <span class="tok-k">return</span> <span class="tok-n">alias</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Up to this point we have been looking at registering plugins automatically when
+their class is loaded, but because a plugin can be registered as an alias
+linked to a class name and settings dictionary, we can capture this information
+in a textual format.</p>
+</div>
+<div class="paragraph">
+<p>The <code>register_plugins</code> method registers multiple plugins based on a dictionary:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">register_plugins</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-n">plugin_info</span><span class="tok-p">):</span>
+        <span class="tok-k">for</span> <span class="tok-n">k</span><span class="tok-p">,</span> <span class="tok-n">v</span> <span class="tok-ow">in</span> <span class="tok-n">plugin_info</span><span class="tok-o">.</span><span class="tok-n">iteritems</span><span class="tok-p">():</span>
+            <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">register_plugin</span><span class="tok-p">(</span><span class="tok-n">k</span><span class="tok-o">.</span><span class="tok-n">split</span><span class="tok-p">(</span><span class="tok-s">&quot;|&quot;</span><span class="tok-p">),</span> <span class="tok-n">v</span><span class="tok-p">[</span><span class="tok-mi">0</span><span class="tok-p">],</span> <span class="tok-n">v</span><span class="tok-p">[</span><span class="tok-mi">1</span><span class="tok-p">])</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The dictionaries keys should be aliases, separated by the pipe symbol if
+there&#8217;s more than one of them. The values should be a tuple of
+class-or-class-name and a settings dictionary. (You can redefine
+<code>register_plugins</code> or create your own method which calls <code>register_plugin</code> and
+come up with any other format you want.)</p>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s an example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python"><span class="tok-k">def</span> <span class="tok-nf">test_register_plugins</span><span class="tok-p">():</span>
+    <span class="tok-n">plugin_info</span> <span class="tok-o">=</span> <span class="tok-p">{</span>
+            <span class="tok-s">&#39;foo|altfoo&#39;</span> <span class="tok-p">:</span> <span class="tok-p">(</span><span class="tok-s">&quot;Data&quot;</span><span class="tok-p">,</span> <span class="tok-p">{</span> <span class="tok-s">&quot;help&quot;</span> <span class="tok-p">:</span> <span class="tok-s">&quot;This is the foo plugin.&quot;</span><span class="tok-p">})</span>
+            <span class="tok-p">}</span>
+
+    <span class="tok-k">assert</span> <span class="tok-ow">not</span> <span class="tok-s">&#39;foo&#39;</span> <span class="tok-ow">in</span> <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">plugins</span>
+    <span class="tok-k">assert</span> <span class="tok-ow">not</span> <span class="tok-s">&#39;altfoo&#39;</span> <span class="tok-ow">in</span> <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">plugins</span>
+
+    <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">register_plugins</span><span class="tok-p">(</span><span class="tok-n">plugin_info</span><span class="tok-p">)</span>
+
+    <span class="tok-k">assert</span> <span class="tok-s">&#39;foo&#39;</span> <span class="tok-ow">in</span> <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">plugins</span>
+    <span class="tok-k">assert</span> <span class="tok-s">&#39;altfoo&#39;</span> <span class="tok-ow">in</span> <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">plugins</span>
+
+    <span class="tok-n">foo</span> <span class="tok-o">=</span> <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">create_instance</span><span class="tok-p">(</span><span class="tok-s">&#39;foo&#39;</span><span class="tok-p">,</span> <span class="tok-bp">None</span><span class="tok-p">)</span>
+    <span class="tok-n">altfoo</span> <span class="tok-o">=</span> <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">create_instance</span><span class="tok-p">(</span><span class="tok-s">&#39;altfoo&#39;</span><span class="tok-p">,</span> <span class="tok-bp">None</span><span class="tok-p">)</span>
+
+    <span class="tok-k">assert</span> <span class="tok-n">foo</span><span class="tok-o">.</span><span class="tok-n">setting</span><span class="tok-p">(</span><span class="tok-s">&#39;help&#39;</span><span class="tok-p">)</span> <span class="tok-o">==</span> <span class="tok-s">&quot;This is the foo plugin.&quot;</span>
+    <span class="tok-k">assert</span> <span class="tok-n">altfoo</span><span class="tok-o">.</span><span class="tok-n">setting</span><span class="tok-p">(</span><span class="tok-s">&#39;help&#39;</span><span class="tok-p">)</span> <span class="tok-o">==</span> <span class="tok-s">&quot;This is the foo plugin.&quot;</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>register_plugins_from_dict</code> method makes it easy to define a simpler data
+structure (one which will map easily to a YAML file), and it retrieves and
+removes a <code>class</code> key and generates the required format for calling
+<code>register_plugin</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">register_plugins_from_dict</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-n">yaml_content</span><span class="tok-p">):</span>
+        <span class="tok-k">for</span> <span class="tok-n">alias</span><span class="tok-p">,</span> <span class="tok-n">info_dict</span> <span class="tok-ow">in</span> <span class="tok-n">yaml_content</span><span class="tok-o">.</span><span class="tok-n">iteritems</span><span class="tok-p">():</span>
+            <span class="tok-k">if</span> <span class="tok-s">&quot;:&quot;</span> <span class="tok-ow">in</span> <span class="tok-n">alias</span><span class="tok-p">:</span>
+                <span class="tok-n">_</span><span class="tok-p">,</span> <span class="tok-n">alias</span> <span class="tok-o">=</span> <span class="tok-n">alias</span><span class="tok-o">.</span><span class="tok-n">split</span><span class="tok-p">(</span><span class="tok-s">&quot;:&quot;</span><span class="tok-p">)</span>
+
+            <span class="tok-k">if</span> <span class="tok-ow">not</span> <span class="tok-n">info_dict</span><span class="tok-o">.</span><span class="tok-n">has_key</span><span class="tok-p">(</span><span class="tok-s">&#39;class&#39;</span><span class="tok-p">):</span>
+                <span class="tok-kn">import</span> <span class="tok-nn">json</span>
+                <span class="tok-n">msg</span> <span class="tok-o">=</span> <span class="tok-s">&quot;invalid info dict for </span><span class="tok-si">%s</span><span class="tok-s">: </span><span class="tok-si">%s</span><span class="tok-s">&quot;</span> <span class="tok-o">%</span> <span class="tok-p">(</span><span class="tok-n">alias</span><span class="tok-p">,</span> <span class="tok-n">json</span><span class="tok-o">.</span><span class="tok-n">dumps</span><span class="tok-p">(</span><span class="tok-n">info_dict</span><span class="tok-p">))</span>
+                <span class="tok-k">raise</span> <span class="tok-n">InternalCashewException</span><span class="tok-p">(</span><span class="tok-n">msg</span><span class="tok-p">)</span>
+
+            <span class="tok-n">class_name</span> <span class="tok-o">=</span> <span class="tok-n">info_dict</span><span class="tok-p">[</span><span class="tok-s">&#39;class&#39;</span><span class="tok-p">]</span>
+            <span class="tok-k">del</span> <span class="tok-n">info_dict</span><span class="tok-p">[</span><span class="tok-s">&#39;class&#39;</span><span class="tok-p">]</span>
+            <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">register_plugin</span><span class="tok-p">(</span><span class="tok-n">alias</span><span class="tok-o">.</span><span class="tok-n">split</span><span class="tok-p">(</span><span class="tok-s">&quot;|&quot;</span><span class="tok-p">),</span> <span class="tok-n">class_name</span><span class="tok-p">,</span> <span class="tok-n">info_dict</span><span class="tok-p">)</span>
+</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python"><span class="tok-k">def</span> <span class="tok-nf">test_register_plugins_from_dict</span><span class="tok-p">():</span>
+    <span class="tok-n">plugin_info</span> <span class="tok-o">=</span> <span class="tok-p">{</span>
+            <span class="tok-s">&#39;bar|altbar&#39;</span> <span class="tok-p">:</span> <span class="tok-p">{</span> <span class="tok-s">&quot;class&quot;</span> <span class="tok-p">:</span> <span class="tok-s">&quot;Data&quot;</span><span class="tok-p">,</span>  <span class="tok-s">&quot;help&quot;</span> <span class="tok-p">:</span> <span class="tok-s">&quot;This is the bar plugin.&quot;</span><span class="tok-p">}</span>
+            <span class="tok-p">}</span>
+
+    <span class="tok-k">assert</span> <span class="tok-ow">not</span> <span class="tok-s">&#39;bar&#39;</span> <span class="tok-ow">in</span> <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">plugins</span>
+    <span class="tok-k">assert</span> <span class="tok-ow">not</span> <span class="tok-s">&#39;altbar&#39;</span> <span class="tok-ow">in</span> <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">plugins</span>
+
+    <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">register_plugins_from_dict</span><span class="tok-p">(</span><span class="tok-n">plugin_info</span><span class="tok-p">)</span>
+
+    <span class="tok-k">assert</span> <span class="tok-s">&#39;bar&#39;</span> <span class="tok-ow">in</span> <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">plugins</span>
+    <span class="tok-k">assert</span> <span class="tok-s">&#39;altbar&#39;</span> <span class="tok-ow">in</span> <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">plugins</span>
+
+    <span class="tok-n">bar</span> <span class="tok-o">=</span> <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">create_instance</span><span class="tok-p">(</span><span class="tok-s">&#39;bar&#39;</span><span class="tok-p">,</span> <span class="tok-bp">None</span><span class="tok-p">)</span>
+    <span class="tok-n">altbar</span> <span class="tok-o">=</span> <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">create_instance</span><span class="tok-p">(</span><span class="tok-s">&#39;altbar&#39;</span><span class="tok-p">,</span> <span class="tok-bp">None</span><span class="tok-p">)</span>
+
+    <span class="tok-k">assert</span> <span class="tok-n">bar</span><span class="tok-o">.</span><span class="tok-n">setting</span><span class="tok-p">(</span><span class="tok-s">&#39;help&#39;</span><span class="tok-p">)</span> <span class="tok-o">==</span> <span class="tok-s">&quot;This is the bar plugin.&quot;</span>
+    <span class="tok-k">assert</span> <span class="tok-n">altbar</span><span class="tok-o">.</span><span class="tok-n">setting</span><span class="tok-p">(</span><span class="tok-s">&#39;help&#39;</span><span class="tok-p">)</span> <span class="tok-o">==</span> <span class="tok-s">&quot;This is the bar plugin.&quot;</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>And here&#8217;s a convenience method which registers plugins specified in a YAML
+file using <code>register_plugins_from_dict</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">register_plugins_from_yaml_file</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-n">yaml_file</span><span class="tok-p">):</span>
+        <span class="tok-k">with</span> <span class="tok-nb">open</span><span class="tok-p">(</span><span class="tok-n">yaml_file</span><span class="tok-p">,</span> <span class="tok-s">&#39;rb&#39;</span><span class="tok-p">)</span> <span class="tok-k">as</span> <span class="tok-n">f</span><span class="tok-p">:</span>
+            <span class="tok-n">yaml_content</span> <span class="tok-o">=</span> <span class="tok-n">yaml</span><span class="tok-o">.</span><span class="tok-n">safe_load</span><span class="tok-p">(</span><span class="tok-n">f</span><span class="tok-o">.</span><span class="tok-n">read</span><span class="tok-p">())</span>
+        <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">register_plugins_from_dict</span><span class="tok-p">(</span><span class="tok-n">yaml_content</span><span class="tok-p">)</span>
+</code></pre>
+</div>
+</div>
 </div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2013-10-16 21:12:19 PDT
+Last updated 2013-10-16 22:14:03 PDT
 </div>
 </div>
 </body>
