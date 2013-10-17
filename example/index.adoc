@@ -2,6 +2,20 @@
 :toc:
 :source-highlighter: pygments
 
+{% macro src(section, language="python") %}
+[source,{{ language }}]
+----
+{{ d['/cashew/plugin.py|pydoc'][section] }}
+----
+{% endmacro %}
+
+{% macro test(section, language="python") %}
+[source,{{ language }}]
+----
+{{ d['/tests/test_plugin_meta.py|pydoc'][section] }}
+----
+{% endmacro %}
+
 == Introduction
 
 Cashew is a plugin system for python, based on the ideas in
@@ -18,7 +32,7 @@ You identify a subclass and/or a preconfigured bundle of settings by an alias,
 and settings can further be modified at runtime to allow for multiple levels of
 configuration.
 
-== Usage Guide
+== Basic Usage
 
 === Creating a Base Class
 
@@ -45,10 +59,7 @@ several others are implemented via plugins.
 
 The `__init__` method in PluginMeta handles plugin registration:
 
-[source,python]
-----
-{{ d['/cashew/plugin.py|pydoc']['PluginMeta.__init__:source'] }}
-----
+{{ src('PluginMeta.__init__:source') }}
 
 When this method is called on the base class itself (in our example the Data
 class), it creates an empty dictionary named `plugins`, and when it is
@@ -146,4 +157,44 @@ the `csv` library, while the `write-header` setting is used to determine if the
 `writeheader()` method will be called.
 
 {{ d['classes2.py|idio|asciisyn']['csv-present'] }}
+
+== Implementation Details
+
+=== Plugin Registration
+
+Let's review the `__init__` method and follow the methods it calls.
+
+{{ src('PluginMeta.__init__:source') }}
+
+The first line asserts that our plugin class inherits from `Plugin`. If this
+were not the case then lots of expected behavior wouldn't work.
+
+{{ test('test_must_inherit_from_plugin_class:source') }}
+
+In the next two lines, if we detect `__metaclass__` in the class attributes
+then we are creating a plugin base class, and so we want to initialize a
+plugins dictionary. If not, then we have already created a base class and we
+are creating a plugin subclass. In this case, if there are aliases specified,
+we call the `register_plugin` method.
+
+{{ src('PluginMeta.register_plugin:source') }}
+
+The register plugin method may receive a list of aliases or a single alias, and it may receive a class name or an actual class. The first thing it does is standardize each of these.
+
+{{ src('PluginMeta.standardize_alias_or_aliases:source') }}
+{{ src('PluginMeta.get_reference_to_class:source') }}
+
+The `get_reference_to_class` method will load a fully qualified class name automatically:
+
+{{ test('test_get_reference_to_qualified_class:source') }}
+
+If you want to be able to specify an unqualified class name then you need to
+establish a mapping between class names and class objects in a
+`load_class_from_locals` method, here's one way to do this:
+
+{{ test('Data.load_class_from_locals:source') }}
+
+And this allows you to do:
+
+{{ test('test_get_reference_to_class:source') }}
 

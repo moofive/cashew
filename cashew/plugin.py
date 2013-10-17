@@ -1,27 +1,14 @@
+import inflection
 import inspect
 import os
 import sys
-import inflection
 import yaml
 
-class CashewException(Exception):
-    pass
-
-class InternalCashewException(CashewException):
-    pass
-
-class UserFeedback(CashewException):
-    pass
-
-class InactivePlugin(UserFeedback):
-    pass
-
-class NoPlugin(UserFeedback):
-    pass
+from cashew.exceptions import *
 
 class Plugin(object):
     """
-    Base class for plugins. Define *instance* methods shared by plugins here.
+    Base class for plugins. Define instance methods shared by plugins here.
     """
     aliases = []
     _settings = {}
@@ -57,6 +44,10 @@ class Plugin(object):
         self.__class__.class_update_settings(self, underscore_settings)
 
     def safe_setting(self, name_hyphen, default=None):
+        """
+        Retrieves the setting value, but returns a default value rather than
+        raising an error if the setting does not exist.
+        """
         try:
             return self.setting(name_hyphen)
         except UserFeedback:
@@ -112,14 +103,75 @@ class PluginMeta(type):
     Base meta class for anything plugin-able.
     """
     _store_other_class_settings = {} # allow plugins to define settings for other classes
-    official_dexy_plugins = ("dexy_templates", "dexy_viewer", "dexy_filter_examples")
 
     def __init__(cls, name, bases, attrs):
         assert issubclass(cls, Plugin), "%s should inherit from class Plugin" % name
         if '__metaclass__' in attrs:
             cls.plugins = {}
-        if hasattr(cls, 'aliases'):
+        elif hasattr(cls, 'aliases'):
             cls.register_plugin(cls.aliases, cls, {})
+
+    def register_plugin(cls, alias_or_aliases, class_or_class_name, settings):
+        aliases = cls.standardize_alias_or_aliases(alias_or_aliases)
+        klass = cls.get_reference_to_class(class_or_class_name)
+
+        # Ensure 'aliases' and 'help' settings are set.
+        settings['aliases'] = ('aliases', aliases)
+        if not settings.has_key('help'):
+            docstring = klass.check_docstring()
+            settings['help'] = ("Helpstring for plugin.", docstring)
+
+        # Create the tuple which will be registered for the plugin.
+        class_info = (class_or_class_name, settings)
+
+        # Register the class_info tuple for each alias.
+        for alias in aliases:
+            if isinstance(class_or_class_name, type):
+                modname = class_or_class_name.__module__
+                alias = cls.apply_prefix(modname, alias)
+
+            cls.plugins[alias] = class_info
+
+        # Register any settings defined for other classes.
+        if hasattr(klass, '_other_class_settings') and klass._other_class_settings:
+            PluginMeta._store_other_class_settings.update(klass._other_class_settings)
+
+    def standardize_alias_or_aliases(cls, alias_or_aliases):
+        """
+        Make sure we don't attempt to iterate over an alias string thinking
+        it's an array.
+        """
+        if isinstance(alias_or_aliases, basestring):
+            return [alias_or_aliases]
+        else:
+            return alias_or_aliases
+
+    def get_reference_to_class(cls, class_or_class_name):
+        """
+        Detect if we get a class or a name, convert a name to a class.
+        """
+        if isinstance(class_or_class_name, type):
+            return class_or_class_name
+
+        elif isinstance(class_or_class_name, basestring):
+            if ":" in class_or_class_name:
+                mod_name, class_name = class_or_class_name.split(":")
+
+                if not mod_name in sys.modules:
+                    __import__(mod_name)
+
+                mod = sys.modules[mod_name]
+                return mod.__dict__[class_name]
+
+            else:
+                return cls.load_class_from_locals(class_or_class_name)
+
+        else:
+            msg = "Unexpected Type '%s'" % type(class_or_class_name)
+            raise InternalCashewException(msg)
+
+    def load_class_from_locals(cls, class_name):
+        raise Exception("not implemented")
 
     def __iter__(cls, *instanceargs):
         processed_aliases = set()
@@ -146,11 +198,16 @@ class PluginMeta(type):
         return sorted(keys)[0]
 
     def check_docstring(cls):
-        if not inspect.getdoc(cls):
+        """
+        Asserts that the class has a docstring, returning it if successful.
+        """
+        docstring = inspect.getdoc(cls)
+        if not docstring:
             breadcrumbs = " -> ".join(t.__name__ for t in inspect.getmro(cls)[:-1][::-1])
-            msg = "docstring required for dexy plugin '%s' (%s, defined in %s)"
+            msg = "docstring required for plugin '%s' (%s, defined in %s)"
             args = (cls.__name__, breadcrumbs, cls.__module__)
             raise InternalCashewException(msg % args)
+        return docstring
 
     def register_plugins(cls, plugin_info):
         for k, v in plugin_info.iteritems():
@@ -178,72 +235,15 @@ class PluginMeta(type):
             yaml_content = yaml.safe_load(f.read())
         cls.register_plugins_from_dict(yaml_content)
 
-    def register_plugin(cls, alias_or_aliases, class_or_class_name, settings):
-        if isinstance(alias_or_aliases, basestring):
-            aliases = [alias_or_aliases]
-        else:
-            aliases = alias_or_aliases
+    def apply_prefix(cls, modname, alias):
+        return alias
 
-        klass = cls.get_reference_to_class(class_or_class_name)
-
-        if not settings.has_key('help'):
-            docstring = inspect.getdoc(klass)
-            if not docstring:
-                msg = "No help setting and no docstring for %s"
-                args = (klass)
-                raise InternalCashewException(msg % args)
-            settings['help'] = ("Helpstring for plugin.", docstring)
-
-        settings['aliases'] = ('aliases', aliases)
-
-        class_info = (class_or_class_name, settings)
-        for alias in aliases:
-            if isinstance(class_or_class_name, type):
-                modname = class_or_class_name.__module__
-                if modname.startswith("dexy_") and not modname in PluginMeta.official_dexy_plugins:
-                    prefix = modname.split(".")[0].replace("dexy_", "")
-                    alias = "%s:%s" % (prefix, alias)
-
-            cls.plugins[alias] = class_info
-
-        if hasattr(klass, '_other_class_settings') and klass._other_class_settings:
-            PluginMeta._store_other_class_settings.update(klass._other_class_settings)
 
     def imro(cls):
         """
         Returns MRO in reverse order, skipping 'object/type' class.
         """
         return reversed(inspect.getmro(cls)[0:-2])
-
-    def get_reference_to_class(cls, class_or_class_name):
-        if isinstance(class_or_class_name, type):
-            return class_or_class_name
-        elif isinstance(class_or_class_name, basestring):
-            if ":" in class_or_class_name:
-                mod_name, class_name = class_or_class_name.split(":")
-
-                # load the module
-                if not mod_name in sys.modules:
-                    __import__(mod_name)
-                mod = sys.modules[mod_name]
-
-                return mod.__dict__[class_name]
-            else:
-                from dexy.template import Template
-                from dexy.filters.pexp import PexpectReplFilter
-                from dexy.filters.process import SubprocessCompileFilter
-                from dexy.filters.process import SubprocessCompileInputFilter
-                from dexy.filters.process import SubprocessExtToFormatFilter
-                from dexy.filters.process import SubprocessFilter
-                from dexy.filters.process import SubprocessFormatFlagFilter
-                from dexy.filters.process import SubprocessInputFileFilter
-                from dexy.filters.process import SubprocessInputFilter
-                from dexy.filters.process import SubprocessStdoutFilter
-                from dexy.filters.process import SubprocessStdoutTextFilter
-                from dexy.filters.standard import PreserveDataClassFilter
-                return locals()[class_or_class_name]
-        else:
-            raise Exception("Unexpected type %s" % type(class_or_class_name))
 
     def class_update_settings(cls, instance, new_settings, enforce_helpstring=True):
         for raw_key, value in new_settings.iteritems():
