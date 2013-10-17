@@ -19,9 +19,6 @@ class Plugin(object):
     def name(self):
         return inflection.titleize(self.setting('aliases')[0])
 
-    def help(self):
-        return self.setting('help')
-
     def initialize_settings(self, **raw_kwargs):
         self._instance_settings = {}
 
@@ -32,7 +29,7 @@ class Plugin(object):
     def initialize_settings_from_parents(self):
         for parent_class in self.__class__.imro():
             if parent_class._settings:
-                self._update_settings(parent_class._settings)
+                self.update_settings(parent_class._settings)
             if hasattr(parent_class, '_unset'):
                 for unset in parent_class._unset:
                     del self._instance_settings[unset]
@@ -42,13 +39,21 @@ class Plugin(object):
             alias = self.__class__.aliases[0]
             settings_from_other_classes = PluginMeta._store_other_class_settings.get(alias)
             if settings_from_other_classes:
-                self._update_settings(settings_from_other_classes)
+                self.update_settings(settings_from_other_classes)
 
     def initialize_settings_from_raw_kwargs(self, raw_kwargs):
-        hyphen_settings = dict((k, v) for k, v in raw_kwargs.items() if k in self._instance_settings)
-        underscore_settings = dict((k.replace("_", "-"), v) for k, v in raw_kwargs.items() if k.replace("_", "-") in self._instance_settings)
-        self._update_settings(hyphen_settings)
-        self._update_settings(underscore_settings)
+        hyphen_settings = dict(
+                (k, v)
+                for k, v in raw_kwargs.iteritems()
+                if k in self._instance_settings)
+
+        underscore_settings = dict(
+                (k.replace("_", "-"), v)
+                for k, v in raw_kwargs.iteritems()
+                if k.replace("_", "-") in self._instance_settings)
+
+        self.update_settings(hyphen_settings)
+        self.update_settings(underscore_settings)
 
     def safe_setting(self, name_hyphen, default=None):
         """
@@ -65,8 +70,8 @@ class Plugin(object):
         Retrieves the setting value whose name is indicated by name_hyphen.
 
         Values starting with $ are assumed to reference environment variables,
-        and the value stored in environment variables is retrieved. (It's an
-        error if there's no corresponding environment variable set.)
+        and the value stored in environment variables is retrieved. It's an
+        error if thes corresponding environment variable it not set.
         """
         if name_hyphen in self._instance_settings:
             value = self._instance_settings[name_hyphen][1]
@@ -89,8 +94,10 @@ class Plugin(object):
             else:
                 msg = "'%s' is not defined in your environment" % env_var
                 raise UserFeedback(msg)
+
         elif hasattr(value, 'startswith') and value.startswith("\$"):
             return value.replace("\$", "$")
+
         else:
             return value
 
@@ -100,7 +107,11 @@ class Plugin(object):
         """
         if not skip:
             skip = []
-        return dict((k, v[1]) for k, v in self._instance_settings.iteritems() if not k in skip)
+
+        return dict(
+                (k, v[1])
+                for k, v in self._instance_settings.iteritems()
+                if not k in skip)
 
     def update_settings(self, new_settings):
         """
@@ -290,13 +301,16 @@ class PluginMeta(type):
         """
         return reversed(inspect.getmro(cls)[0:-2])
 
-
-    # documented above here
-
     def __iter__(cls, *instanceargs):
+        """
+        Lets you iterate over instances of all plugins which are not marked as
+        'inactive'. If there are multiple aliases, the resulting plugin is only
+        called once.
+        """
         processed_aliases = set()
         for alias in sorted(cls.plugins):
             if alias in processed_aliases:
+                # duplicate alias
                 continue
 
             try:
@@ -307,13 +321,3 @@ class PluginMeta(type):
 
             except InactivePlugin:
                 pass
-
-    def standardize_alias(cls, alias):
-        obj = cls.plugins[alias]
-        keys = []
-        for k, v in cls.plugins.iteritems():
-            if v == obj:
-                keys.append(k)
-        assert alias in keys
-        return sorted(keys)[0]
-

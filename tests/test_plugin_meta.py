@@ -130,3 +130,7 @@ def test_unsetting_settings():
         raise Exception("should not get here")
     except UserFeedback as e:
         assert str(e) == "No setting named 'foo'"
+
+def test_iter():
+    aliases = sorted(instance.alias for instance in TestSettingsBase)
+    assert aliases == ['nosettingsofmyown', 'overridefoosetting', 'unsetfoo']

@@ -270,35 +270,47 @@ If any positional or keyword arguments are passed to `create_instance` (after
 the alias argument), these are assumed to be constructor arguments and are
 passed to the constructor.
 
-After the instance is created, we come to the settings.
+After the instance is created, we need to initialize the settings to the values
+specified in various locations.
 
-First the `initialize_settings` method is called. This method is part of the
+The `initialize_settings` method is called. This method is part of the
 `Plugin` class, not `PluginMeta`, so it's an instance method of our newly
 created object, not a class method.
 
 {{ src('Plugin.initialize_settings:source') }}
 
 The `_instance_settings` attribute is used to store active settings for a given
-instance. This is first populated by settings defined in parent classes,
-starting with the base parent so that any subclasses will override settings or
-default values they also define.
-
-{{ src('Plugin.initialize_settings_from_parents:source') }}
-
-This calls the `_update_settings` method, which does things like
-standardize the format from underscore to hyphen, and checks to ensure settings
-include a help string if this is the first time in the class hierarchy that
-they have been defined:
+instance. The subsequent methods populate the dictionary using the
+`update_settings` method, which does things like standardize the format from
+underscore to hyphen, and checks to ensure settings include a help string if
+this is the first time in the class hierarchy that they have been defined:
 
 {{ src('Plugin.update_settings:source') }}
 {{ src('Plugin._update_settings:source') }}
 
-One possible snag is that when data is loaded from a file there is no way to
+One issue is that when data is loaded from a file there is no way to
 distinguish between a tuple and a list of length two, and a list of length two
 may either be the desired value of a setting, or the first element may be a
 helpstring and the second element may be the desired value. It is assumed that
 if the setting does not already exist, then a list of length 2 should be
 interpreted as a (helpstring, value,) tuple.
+
+Returning to our `initialize_settings` method:
+
+{{ src('Plugin.initialize_settings:source') }}
+
+This is first populated by settings defined in parent classes, starting with
+the earliest ancestor.
+
+{{ src('Plugin.initialize_settings_from_parents:source') }}
+
+{{ src('PluginMeta.imro:source') }}
+
+You can provide an `_unset` list to remove settings you no longer wish to be
+active:
+
+{{ test('UnsetFoo:source') }}
+{{ test('test_unsetting_settings:source') }}
 
 Here's an example of a setting inheritance, here's a base class defining a
 `foo` setting:
@@ -315,10 +327,44 @@ Here's a subclass which does:
 {{ test('OverrideFooSetting:source') }}
 {{ test('test_override_settings:source') }}
 
-You can provide an `_unset` list to remove settings you no longer wish to be
-active:
+Next, we initialize settings which may have been specified by other classes:
 
-{{ test('UnsetFoo:source') }}
-{{ test('test_unsetting_settings:source') }}
+{{ src('Plugin.initialize_settings_from_other_classes:source') }}
 
+And then we initialize settings using any kwargs that were passed to
+`initialize_settings`:
 
+{{ src('Plugin.initialize_settings_from_raw_kwargs:source') }}
+
+Now returning to `create_instance`:
+
+{{ src('PluginMeta.create_instance:source') }}
+
+We see there is another call to `update_settings` and this is where settings
+stored in the plugins dictionary are applied.
+
+This is because `initialize_settings` may be called in the constructor and if
+so it does not get called again here, so a separate call to `update_settings`
+is required.
+
+In addition to creating individual instances using `create_instance`, it is
+possible to iterate over an instance of each type of plugin.
+
+{{ src('PluginMeta.__iter__:source') }}
+
+{{ test('test_iter:source') }}
+
+=== Retrieving Settings
+
+Individual setting values should be obtained by calling the `setting` method:
+
+{{ src('Plugin.setting:source') }}
+
+If you don't want a UserFeedback exception raised if the setting you ask for
+doesn't exist, you can use the `safe_setting` method instead:
+
+{{ src('Plugin.safe_setting:source') }}
+
+The `setting_values` method returns a dictionary of all setting values:
+
+{{ src('Plugin.setting_values:source') }}
