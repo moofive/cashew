@@ -443,6 +443,7 @@ span.icon > [class^="icon-"], span.icon > [class*=" icon-"] { cursor: default; }
 <li>
 <ul class="sectlevel2">
 <li><a href="#_plugin_registration_2">Plugin Registration</a></li>
+<li><a href="#_creating_instances">Creating Instances</a></li>
 </ul>
 </li>
 </ul>
@@ -579,9 +580,9 @@ and keyword arguments to be passed to a constructor.</p>
 <div class="listingblock">
 <div class="content">
 <pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">create_instance</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-n">alias</span><span class="tok-p">,</span> <span class="tok-o">*</span><span class="tok-n">instanceargs</span><span class="tok-p">,</span> <span class="tok-o">**</span><span class="tok-n">instancekwargs</span><span class="tok-p">):</span>
-        <span class="tok-k">if</span> <span class="tok-n">alias</span><span class="tok-o">.</span><span class="tok-n">startswith</span><span class="tok-p">(</span><span class="tok-s">&#39;-&#39;</span><span class="tok-p">):</span>
-            <span class="tok-n">alias</span> <span class="tok-o">=</span> <span class="tok-s">&#39;-&#39;</span>
-        <span class="tok-k">elif</span> <span class="tok-ow">not</span> <span class="tok-n">alias</span> <span class="tok-ow">in</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">plugins</span><span class="tok-p">:</span>
+        <span class="tok-n">alias</span> <span class="tok-o">=</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">adjust_alias</span><span class="tok-p">(</span><span class="tok-n">alias</span><span class="tok-p">)</span>
+
+        <span class="tok-k">if</span> <span class="tok-ow">not</span> <span class="tok-n">alias</span> <span class="tok-ow">in</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">plugins</span><span class="tok-p">:</span>
             <span class="tok-n">msg</span> <span class="tok-o">=</span> <span class="tok-s">&quot;no alias &#39;</span><span class="tok-si">%s</span><span class="tok-s">&#39; available for &#39;</span><span class="tok-si">%s</span><span class="tok-s">&#39;&quot;</span>
             <span class="tok-n">msgargs</span> <span class="tok-o">=</span> <span class="tok-p">(</span><span class="tok-n">alias</span><span class="tok-p">,</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">__name__</span><span class="tok-p">)</span>
             <span class="tok-k">raise</span> <span class="tok-n">NoPlugin</span><span class="tok-p">(</span><span class="tok-n">msg</span> <span class="tok-o">%</span> <span class="tok-n">msgargs</span><span class="tok-p">)</span>
@@ -1157,12 +1158,251 @@ file using <code>register_plugins_from_dict</code>:</p>
 </div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="_creating_instances">Creating Instances</h3>
+<div class="paragraph">
+<p>The <code>create_instance</code> method uses the plugins dictionary we just populated to
+create a new instance of the specified plugin class.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">create_instance</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-n">alias</span><span class="tok-p">,</span> <span class="tok-o">*</span><span class="tok-n">instanceargs</span><span class="tok-p">,</span> <span class="tok-o">**</span><span class="tok-n">instancekwargs</span><span class="tok-p">):</span>
+        <span class="tok-n">alias</span> <span class="tok-o">=</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">adjust_alias</span><span class="tok-p">(</span><span class="tok-n">alias</span><span class="tok-p">)</span>
+
+        <span class="tok-k">if</span> <span class="tok-ow">not</span> <span class="tok-n">alias</span> <span class="tok-ow">in</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">plugins</span><span class="tok-p">:</span>
+            <span class="tok-n">msg</span> <span class="tok-o">=</span> <span class="tok-s">&quot;no alias &#39;</span><span class="tok-si">%s</span><span class="tok-s">&#39; available for &#39;</span><span class="tok-si">%s</span><span class="tok-s">&#39;&quot;</span>
+            <span class="tok-n">msgargs</span> <span class="tok-o">=</span> <span class="tok-p">(</span><span class="tok-n">alias</span><span class="tok-p">,</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">__name__</span><span class="tok-p">)</span>
+            <span class="tok-k">raise</span> <span class="tok-n">NoPlugin</span><span class="tok-p">(</span><span class="tok-n">msg</span> <span class="tok-o">%</span> <span class="tok-n">msgargs</span><span class="tok-p">)</span>
+
+        <span class="tok-n">class_or_class_name</span><span class="tok-p">,</span> <span class="tok-n">settings</span> <span class="tok-o">=</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">plugins</span><span class="tok-p">[</span><span class="tok-n">alias</span><span class="tok-p">]</span>
+        <span class="tok-n">klass</span> <span class="tok-o">=</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">get_reference_to_class</span><span class="tok-p">(</span><span class="tok-n">class_or_class_name</span><span class="tok-p">)</span>
+
+        <span class="tok-n">instance</span> <span class="tok-o">=</span> <span class="tok-n">klass</span><span class="tok-p">(</span><span class="tok-o">*</span><span class="tok-n">instanceargs</span><span class="tok-p">,</span> <span class="tok-o">**</span><span class="tok-n">instancekwargs</span><span class="tok-p">)</span>
+        <span class="tok-n">instance</span><span class="tok-o">.</span><span class="tok-n">alias</span> <span class="tok-o">=</span> <span class="tok-n">alias</span>
+
+        <span class="tok-k">if</span> <span class="tok-ow">not</span> <span class="tok-nb">hasattr</span><span class="tok-p">(</span><span class="tok-n">instance</span><span class="tok-p">,</span> <span class="tok-s">&#39;_instance_settings&#39;</span><span class="tok-p">):</span>
+            <span class="tok-n">instance</span><span class="tok-o">.</span><span class="tok-n">initialize_settings</span><span class="tok-p">()</span>
+        <span class="tok-n">instance</span><span class="tok-o">.</span><span class="tok-n">update_settings</span><span class="tok-p">(</span><span class="tok-n">settings</span><span class="tok-p">)</span>
+
+        <span class="tok-k">if</span> <span class="tok-ow">not</span> <span class="tok-n">instance</span><span class="tok-o">.</span><span class="tok-n">is_active</span><span class="tok-p">():</span>
+            <span class="tok-k">raise</span> <span class="tok-n">InactivePlugin</span><span class="tok-p">(</span><span class="tok-n">alias</span><span class="tok-p">)</span>
+
+        <span class="tok-k">return</span> <span class="tok-n">instance</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>It uses the <code>get_reference_to_class</code> method we&#8217;ve already seen to retrive a
+reference to the class, then creates a new instance. The <code>alias</code> attribute is
+set on the new instance so we can later retrieve which alias was used to create
+it.</p>
+</div>
+<div class="paragraph">
+<p>If any positional or keyword arguments are passed to <code>create_instance</code> (after
+the alias argument), these are assumed to be constructor arguments and are
+passed to the constructor.</p>
+</div>
+<div class="paragraph">
+<p>After the instance is created, we come to the settings.</p>
+</div>
+<div class="paragraph">
+<p>First the <code>initialize_settings</code> method is called. This method is part of the
+<code>Plugin</code> class, not <code>PluginMeta</code>, so it&#8217;s an instance method of our newly
+created object, not a class method.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">initialize_settings</span><span class="tok-p">(</span><span class="tok-bp">self</span><span class="tok-p">,</span> <span class="tok-o">**</span><span class="tok-n">raw_kwargs</span><span class="tok-p">):</span>
+        <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">_instance_settings</span> <span class="tok-o">=</span> <span class="tok-p">{}</span>
+
+        <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">initialize_settings_from_parents</span><span class="tok-p">()</span>
+        <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">initialize_settings_from_other_classes</span><span class="tok-p">()</span>
+        <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">initialize_settings_from_raw_kwargs</span><span class="tok-p">(</span><span class="tok-n">raw_kwargs</span><span class="tok-p">)</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>_instance_settings</code> attribute is used to store active settings for a given
+instance. This is first populated by settings defined in parent classes,
+starting with the base parent so that any subclasses will override settings or
+default values they also define.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">initialize_settings_from_parents</span><span class="tok-p">(</span><span class="tok-bp">self</span><span class="tok-p">):</span>
+        <span class="tok-k">for</span> <span class="tok-n">parent_class</span> <span class="tok-ow">in</span> <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">__class__</span><span class="tok-o">.</span><span class="tok-n">imro</span><span class="tok-p">():</span>
+            <span class="tok-k">if</span> <span class="tok-n">parent_class</span><span class="tok-o">.</span><span class="tok-n">_settings</span><span class="tok-p">:</span>
+                <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">_update_settings</span><span class="tok-p">(</span><span class="tok-n">parent_class</span><span class="tok-o">.</span><span class="tok-n">_settings</span><span class="tok-p">)</span>
+            <span class="tok-k">if</span> <span class="tok-nb">hasattr</span><span class="tok-p">(</span><span class="tok-n">parent_class</span><span class="tok-p">,</span> <span class="tok-s">&#39;_unset&#39;</span><span class="tok-p">):</span>
+                <span class="tok-k">for</span> <span class="tok-n">unset</span> <span class="tok-ow">in</span> <span class="tok-n">parent_class</span><span class="tok-o">.</span><span class="tok-n">_unset</span><span class="tok-p">:</span>
+                    <span class="tok-k">del</span> <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">_instance_settings</span><span class="tok-p">[</span><span class="tok-n">unset</span><span class="tok-p">]</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This calls the <code>_update_settings</code> method, which does things like
+standardize the format from underscore to hyphen, and checks to ensure settings
+include a help string if this is the first time in the class hierarchy that
+they have been defined:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">update_settings</span><span class="tok-p">(</span><span class="tok-bp">self</span><span class="tok-p">,</span> <span class="tok-n">new_settings</span><span class="tok-p">):</span>
+        <span class="tok-sd">&quot;&quot;&quot;</span>
+<span class="tok-sd">        Update settings for this instance based on the provided dictionary of</span>
+<span class="tok-sd">        setting keys: setting values. Values should be a tuple of (helpstring,</span>
+<span class="tok-sd">        value,) unless the setting has already been defined in a parent class,</span>
+<span class="tok-sd">        in which case just pass the desired value.</span>
+<span class="tok-sd">        &quot;&quot;&quot;</span>
+        <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">_update_settings</span><span class="tok-p">(</span><span class="tok-n">new_settings</span><span class="tok-p">,</span> <span class="tok-bp">False</span><span class="tok-p">)</span>
+</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">_update_settings</span><span class="tok-p">(</span><span class="tok-bp">self</span><span class="tok-p">,</span> <span class="tok-n">new_settings</span><span class="tok-p">,</span> <span class="tok-n">enforce_helpstring</span><span class="tok-o">=</span><span class="tok-bp">True</span><span class="tok-p">):</span>
+        <span class="tok-sd">&quot;&quot;&quot;</span>
+<span class="tok-sd">        This method does the work of updating settings. Can be passed with</span>
+<span class="tok-sd">        enforce_helpstring = False which you may want if allowing end users to</span>
+<span class="tok-sd">        add arbitrary metadata via the settings system.</span>
+
+<span class="tok-sd">        Preferable to use update_settings (without leading _) in code to do the</span>
+<span class="tok-sd">        right thing and always have docstrings.</span>
+<span class="tok-sd">        &quot;&quot;&quot;</span>
+        <span class="tok-k">for</span> <span class="tok-n">raw_setting_name</span><span class="tok-p">,</span> <span class="tok-n">value</span> <span class="tok-ow">in</span> <span class="tok-n">new_settings</span><span class="tok-o">.</span><span class="tok-n">iteritems</span><span class="tok-p">():</span>
+            <span class="tok-n">setting_name</span> <span class="tok-o">=</span> <span class="tok-n">raw_setting_name</span><span class="tok-o">.</span><span class="tok-n">replace</span><span class="tok-p">(</span><span class="tok-s">&quot;_&quot;</span><span class="tok-p">,</span> <span class="tok-s">&quot;-&quot;</span><span class="tok-p">)</span>
+
+            <span class="tok-n">setting_already_exists</span> <span class="tok-o">=</span> <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">_instance_settings</span><span class="tok-o">.</span><span class="tok-n">has_key</span><span class="tok-p">(</span><span class="tok-n">setting_name</span><span class="tok-p">)</span>
+            <span class="tok-n">value_is_list_len_2</span> <span class="tok-o">=</span> <span class="tok-nb">isinstance</span><span class="tok-p">(</span><span class="tok-n">value</span><span class="tok-p">,</span> <span class="tok-nb">list</span><span class="tok-p">)</span> <span class="tok-ow">and</span> <span class="tok-nb">len</span><span class="tok-p">(</span><span class="tok-n">value</span><span class="tok-p">)</span> <span class="tok-o">==</span> <span class="tok-mi">2</span>
+            <span class="tok-n">treat_as_tuple</span> <span class="tok-o">=</span> <span class="tok-ow">not</span> <span class="tok-n">setting_already_exists</span> <span class="tok-ow">and</span> <span class="tok-n">value_is_list_len_2</span>
+
+            <span class="tok-k">if</span> <span class="tok-nb">isinstance</span><span class="tok-p">(</span><span class="tok-n">value</span><span class="tok-p">,</span> <span class="tok-nb">tuple</span><span class="tok-p">)</span> <span class="tok-ow">or</span> <span class="tok-n">treat_as_tuple</span><span class="tok-p">:</span>
+                <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">_instance_settings</span><span class="tok-p">[</span><span class="tok-n">setting_name</span><span class="tok-p">]</span> <span class="tok-o">=</span> <span class="tok-n">value</span>
+
+            <span class="tok-k">else</span><span class="tok-p">:</span>
+                <span class="tok-k">if</span> <span class="tok-ow">not</span> <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">_instance_settings</span><span class="tok-o">.</span><span class="tok-n">has_key</span><span class="tok-p">(</span><span class="tok-n">setting_name</span><span class="tok-p">):</span>
+                    <span class="tok-k">if</span> <span class="tok-n">enforce_helpstring</span><span class="tok-p">:</span>
+                        <span class="tok-n">msg</span> <span class="tok-o">=</span> <span class="tok-s">&quot;You must specify param &#39;</span><span class="tok-si">%s</span><span class="tok-s">&#39; as a tuple of (helpstring, value)&quot;</span>
+                        <span class="tok-k">raise</span> <span class="tok-ne">Exception</span><span class="tok-p">(</span><span class="tok-n">msg</span> <span class="tok-o">%</span> <span class="tok-n">key</span><span class="tok-p">)</span>
+
+                    <span class="tok-k">else</span><span class="tok-p">:</span>
+                        <span class="tok-c"># Create entry with blank helpstring.</span>
+                        <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">_instance_settings</span><span class="tok-p">[</span><span class="tok-n">setting_name</span><span class="tok-p">]</span> <span class="tok-o">=</span> <span class="tok-p">(</span><span class="tok-s">&#39;&#39;</span><span class="tok-p">,</span> <span class="tok-n">value</span><span class="tok-p">,)</span>
+
+                <span class="tok-k">else</span><span class="tok-p">:</span>
+                    <span class="tok-c"># Save inherited helpstring, replace default value.</span>
+                    <span class="tok-n">orig</span> <span class="tok-o">=</span> <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">_instance_settings</span><span class="tok-p">[</span><span class="tok-n">setting_name</span><span class="tok-p">]</span>
+                    <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">_instance_settings</span><span class="tok-p">[</span><span class="tok-n">setting_name</span><span class="tok-p">]</span> <span class="tok-o">=</span> <span class="tok-p">(</span><span class="tok-n">orig</span><span class="tok-p">[</span><span class="tok-mi">0</span><span class="tok-p">],</span> <span class="tok-n">value</span><span class="tok-p">,)</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>One possible snag is that when data is loaded from a file there is no way to
+distinguish between a tuple and a list of length two, and a list of length two
+may either be the desired value of a setting, or the first element may be a
+helpstring and the second element may be the desired value. It is assumed that
+if the setting does not already exist, then a list of length 2 should be
+interpreted as a (helpstring, value,) tuple.</p>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s an example of a setting inheritance, here&#8217;s a base class defining a
+<code>foo</code> setting:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python"><span class="tok-k">class</span> <span class="tok-nc">TestSettingsBase</span><span class="tok-p">(</span><span class="tok-n">Plugin</span><span class="tok-p">):</span>
+    <span class="tok-sd">&quot;&quot;&quot;</span>
+<span class="tok-sd">    Base class for settings class used in tests.</span>
+<span class="tok-sd">    &quot;&quot;&quot;</span>
+    <span class="tok-n">__metaclass__</span> <span class="tok-o">=</span> <span class="tok-n">PluginMeta</span>
+    <span class="tok-n">_settings</span> <span class="tok-o">=</span> <span class="tok-p">{</span>
+            <span class="tok-s">&#39;foo&#39;</span> <span class="tok-p">:</span> <span class="tok-p">(</span><span class="tok-s">&quot;Foo setting&quot;</span><span class="tok-p">,</span> <span class="tok-s">&quot;This is value of foo set in TestSettingsBase&quot;</span><span class="tok-p">)</span>
+            <span class="tok-p">}</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s a subclass which doesn&#8217;t alter the setting:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python"><span class="tok-k">class</span> <span class="tok-nc">NoSettingsOfMyOwn</span><span class="tok-p">(</span><span class="tok-n">TestSettingsBase</span><span class="tok-p">):</span>
+    <span class="tok-sd">&quot;&quot;&quot;</span>
+<span class="tok-sd">    A plugin which doesn&#39;t override foo.</span>
+<span class="tok-sd">    &quot;&quot;&quot;</span>
+    <span class="tok-n">aliases</span> <span class="tok-o">=</span> <span class="tok-p">[</span><span class="tok-s">&#39;nosettingsofmyown&#39;</span><span class="tok-p">]</span>
+</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python"><span class="tok-k">def</span> <span class="tok-nf">test_no_settings_of_my_own</span><span class="tok-p">():</span>
+    <span class="tok-n">nosettingsofmyown</span> <span class="tok-o">=</span> <span class="tok-n">TestSettingsBase</span><span class="tok-o">.</span><span class="tok-n">create_instance</span><span class="tok-p">(</span><span class="tok-s">&#39;nosettingsofmyown&#39;</span><span class="tok-p">)</span>
+    <span class="tok-k">assert</span> <span class="tok-n">nosettingsofmyown</span><span class="tok-o">.</span><span class="tok-n">setting</span><span class="tok-p">(</span><span class="tok-s">&#39;foo&#39;</span><span class="tok-p">)</span> <span class="tok-o">==</span> <span class="tok-s">&quot;This is value of foo set in TestSettingsBase&quot;</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s a subclass which does:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python"><span class="tok-k">class</span> <span class="tok-nc">OverrideFooSetting</span><span class="tok-p">(</span><span class="tok-n">TestSettingsBase</span><span class="tok-p">):</span>
+    <span class="tok-sd">&quot;&quot;&quot;</span>
+<span class="tok-sd">    A plugin which sets a different value for foo and also defines a new setting bar.</span>
+<span class="tok-sd">    &quot;&quot;&quot;</span>
+    <span class="tok-n">aliases</span> <span class="tok-o">=</span> <span class="tok-p">[</span><span class="tok-s">&#39;overridefoosetting&#39;</span><span class="tok-p">]</span>
+    <span class="tok-n">_settings</span> <span class="tok-o">=</span> <span class="tok-p">{</span>
+            <span class="tok-s">&#39;foo&#39;</span> <span class="tok-p">:</span> <span class="tok-s">&quot;I am overriding foo.&quot;</span><span class="tok-p">,</span>
+            <span class="tok-s">&#39;bar&#39;</span> <span class="tok-p">:</span> <span class="tok-p">(</span><span class="tok-s">&quot;The bar setting.&quot;</span><span class="tok-p">,</span> <span class="tok-s">&quot;Default value for the bar setting.&quot;</span><span class="tok-p">)</span>
+            <span class="tok-p">}</span>
+</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python"><span class="tok-k">def</span> <span class="tok-nf">test_override_settings</span><span class="tok-p">():</span>
+    <span class="tok-n">override</span> <span class="tok-o">=</span> <span class="tok-n">TestSettingsBase</span><span class="tok-o">.</span><span class="tok-n">create_instance</span><span class="tok-p">(</span><span class="tok-s">&#39;overridefoosetting&#39;</span><span class="tok-p">)</span>
+    <span class="tok-k">assert</span> <span class="tok-n">override</span><span class="tok-o">.</span><span class="tok-n">setting</span><span class="tok-p">(</span><span class="tok-s">&#39;foo&#39;</span><span class="tok-p">)</span> <span class="tok-o">==</span> <span class="tok-s">&quot;I am overriding foo.&quot;</span>
+    <span class="tok-k">assert</span> <span class="tok-n">override</span><span class="tok-o">.</span><span class="tok-n">setting</span><span class="tok-p">(</span><span class="tok-s">&#39;bar&#39;</span><span class="tok-p">)</span> <span class="tok-o">==</span> <span class="tok-s">&quot;Default value for the bar setting.&quot;</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You can provide an <code>_unset</code> list to remove settings you no longer wish to be
+active:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python"><span class="tok-k">class</span> <span class="tok-nc">UnsetFoo</span><span class="tok-p">(</span><span class="tok-n">TestSettingsBase</span><span class="tok-p">):</span>
+    <span class="tok-sd">&quot;&quot;&quot;</span>
+<span class="tok-sd">    A plugin which unsets the &#39;foo&#39; setting.</span>
+<span class="tok-sd">    &quot;&quot;&quot;</span>
+    <span class="tok-n">_unset</span> <span class="tok-o">=</span> <span class="tok-p">[</span><span class="tok-s">&#39;foo&#39;</span><span class="tok-p">]</span>
+    <span class="tok-n">aliases</span> <span class="tok-o">=</span> <span class="tok-p">[</span><span class="tok-s">&#39;unsetfoo&#39;</span><span class="tok-p">]</span>
+</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python"><span class="tok-k">def</span> <span class="tok-nf">test_unsetting_settings</span><span class="tok-p">():</span>
+    <span class="tok-n">unsetfoo</span> <span class="tok-o">=</span> <span class="tok-n">TestSettingsBase</span><span class="tok-o">.</span><span class="tok-n">create_instance</span><span class="tok-p">(</span><span class="tok-s">&#39;unsetfoo&#39;</span><span class="tok-p">)</span>
+
+    <span class="tok-k">try</span><span class="tok-p">:</span>
+        <span class="tok-n">unsetfoo</span><span class="tok-o">.</span><span class="tok-n">setting</span><span class="tok-p">(</span><span class="tok-s">&#39;foo&#39;</span><span class="tok-p">)</span>
+        <span class="tok-k">raise</span> <span class="tok-ne">Exception</span><span class="tok-p">(</span><span class="tok-s">&quot;should not get here&quot;</span><span class="tok-p">)</span>
+    <span class="tok-k">except</span> <span class="tok-n">UserFeedback</span> <span class="tok-k">as</span> <span class="tok-n">e</span><span class="tok-p">:</span>
+        <span class="tok-k">assert</span> <span class="tok-nb">str</span><span class="tok-p">(</span><span class="tok-n">e</span><span class="tok-p">)</span> <span class="tok-o">==</span> <span class="tok-s">&quot;No setting named &#39;foo&#39;&quot;</span>
+</code></pre>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2013-10-16 22:14:03 PDT
+Last updated 2013-10-17 13:12:09 PDT
 </div>
 </div>
 </body>
