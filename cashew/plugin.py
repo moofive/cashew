@@ -173,6 +173,47 @@ class PluginMeta(type):
     def load_class_from_locals(cls, class_name):
         raise Exception("not implemented")
 
+    def check_docstring(cls):
+        """
+        Asserts that the class has a docstring, returning it if successful.
+        """
+        docstring = inspect.getdoc(cls)
+        if not docstring:
+            breadcrumbs = " -> ".join(t.__name__ for t in inspect.getmro(cls)[:-1][::-1])
+            msg = "docstring required for plugin '%s' (%s, defined in %s)"
+            args = (cls.__name__, breadcrumbs, cls.__module__)
+            raise InternalCashewException(msg % args)
+        return docstring
+
+    def apply_prefix(cls, modname, alias):
+        return alias
+
+    def register_plugins(cls, plugin_info):
+        for k, v in plugin_info.iteritems():
+            cls.register_plugin(k.split("|"), v[0], v[1])
+
+    def register_plugins_from_dict(cls, yaml_content):
+        for alias, info_dict in yaml_content.iteritems():
+            if ":" in alias:
+                _, alias = alias.split(":")
+
+            if not info_dict.has_key('class'):
+                import json
+                msg = "invalid info dict for %s: %s" % (alias, json.dumps(info_dict))
+                raise InternalCashewException(msg)
+
+            class_name = info_dict['class']
+            del info_dict['class']
+            cls.register_plugin(alias.split("|"), class_name, info_dict)
+
+    def register_plugins_from_yaml_file(cls, yaml_file):
+        with open(yaml_file, 'rb') as f:
+            yaml_content = yaml.safe_load(f.read())
+        cls.register_plugins_from_dict(yaml_content)
+
+
+    # documented above here
+
     def __iter__(cls, *instanceargs):
         processed_aliases = set()
         for alias in sorted(cls.plugins):
@@ -196,47 +237,6 @@ class PluginMeta(type):
                 keys.append(k)
         assert alias in keys
         return sorted(keys)[0]
-
-    def check_docstring(cls):
-        """
-        Asserts that the class has a docstring, returning it if successful.
-        """
-        docstring = inspect.getdoc(cls)
-        if not docstring:
-            breadcrumbs = " -> ".join(t.__name__ for t in inspect.getmro(cls)[:-1][::-1])
-            msg = "docstring required for plugin '%s' (%s, defined in %s)"
-            args = (cls.__name__, breadcrumbs, cls.__module__)
-            raise InternalCashewException(msg % args)
-        return docstring
-
-    def register_plugins(cls, plugin_info):
-        for k, v in plugin_info.iteritems():
-            cls.register_plugin(k.split("|"), v[0], v[1])
-
-    def register_plugins_from_dict(cls, yaml_content):
-        for alias, info_dict in yaml_content.iteritems():
-            if ":" in alias:
-                _, alias = alias.split(":")
-
-            if not info_dict.has_key('class'):
-                import json
-                msg = "invalid info dict for %s: %s" % (alias, json.dumps(info_dict))
-                raise InternalCashewException(msg)
-
-            class_name = info_dict['class']
-            del info_dict['class']
-            cls.register_plugin(alias.split("|"), class_name, info_dict)
-
-    def register_plugins_from_yaml_file(cls, yaml_file):
-        """
-        Call this from a particular class, e.g. Filter.register_plugins_from_yaml_file('filters.yaml')
-        """
-        with open(yaml_file, 'rb') as f:
-            yaml_content = yaml.safe_load(f.read())
-        cls.register_plugins_from_dict(yaml_content)
-
-    def apply_prefix(cls, modname, alias):
-        return alias
 
 
     def imro(cls):

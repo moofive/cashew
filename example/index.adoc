@@ -198,3 +198,59 @@ And this allows you to do:
 
 {{ test('test_get_reference_to_class:source') }}
 
+You'll need to implement this one, by default it's disabled:
+
+{{ src('PluginMeta.load_class_from_locals:source') }}
+
+Here's the `register_plugin` source again since it's been a while since we've
+seen it:
+
+{{ src('PluginMeta.register_plugin:source') }}
+
+The next block of text adds `aliases` and `help` settings so we can count on
+these always being available. You need to provide a docstring which will be
+used for the 'help' setting.
+
+{{ src('PluginMeta.check_docstring:source') }}
+
+Once the settings are normalized, then we are ready to actually add class
+information to the plugins dictionary using the aliases as keys.
+
+There's an option to add namespacing to plugins by implementing a different
+`apply_prefix` class method in your plugin base class:
+
+{{ src('PluginMeta.apply_prefix:source') }}
+
+Up to this point we have been looking at registering plugins automatically when
+their class is loaded, but because a plugin can be registered as an alias
+linked to a class name and settings dictionary, we can capture this information
+in a textual format.
+
+The `register_plugins` method registers multiple plugins based on a dictionary:
+
+{{ src('PluginMeta.register_plugins:source') }}
+
+The dictionaries keys should be aliases, separated by the pipe symbol if
+there's more than one of them. The values should be a tuple of
+class-or-class-name and a settings dictionary. (You can redefine
+`register_plugins` or create your own method which calls `register_plugin` and
+come up with any other format you want.)
+
+Here's an example:
+
+{{ test('test_register_plugins:source') }}
+
+The `register_plugins_from_dict` method makes it easy to define a simpler data
+structure (one which will map easily to a YAML file), and it retrieves and
+removes a `class` key and generates the required format for calling
+`register_plugin`:
+
+{{ src('PluginMeta.register_plugins_from_dict:source') }}
+
+{{ test('test_register_plugins_from_dict:source') }}
+
+And here's a convenience method which registers plugins specified in a YAML
+file using `register_plugins_from_dict`:
+
+{{ src('PluginMeta.register_plugins_from_yaml_file:source') }}
+
