@@ -15,5 +15,5 @@ setup(
         name='cashew',
         packages=find_packages(),
         url='http://dexy.github.io/cashew/',
-        version="0.0.1"
+        version="0.1"
         )
