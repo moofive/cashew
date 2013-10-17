@@ -254,3 +254,71 @@ file using `register_plugins_from_dict`:
 
 {{ src('PluginMeta.register_plugins_from_yaml_file:source') }}
 
+=== Creating Instances
+
+The `create_instance` method uses the plugins dictionary we just populated to
+create a new instance of the specified plugin class.
+
+{{ src('PluginMeta.create_instance:source') }}
+
+It uses the `get_reference_to_class` method we've already seen to retrive a
+reference to the class, then creates a new instance. The `alias` attribute is
+set on the new instance so we can later retrieve which alias was used to create
+it.
+
+If any positional or keyword arguments are passed to `create_instance` (after
+the alias argument), these are assumed to be constructor arguments and are
+passed to the constructor.
+
+After the instance is created, we come to the settings.
+
+First the `initialize_settings` method is called. This method is part of the
+`Plugin` class, not `PluginMeta`, so it's an instance method of our newly
+created object, not a class method.
+
+{{ src('Plugin.initialize_settings:source') }}
+
+The `_instance_settings` attribute is used to store active settings for a given
+instance. This is first populated by settings defined in parent classes,
+starting with the base parent so that any subclasses will override settings or
+default values they also define.
+
+{{ src('Plugin.initialize_settings_from_parents:source') }}
+
+This calls the `_update_settings` method, which does things like
+standardize the format from underscore to hyphen, and checks to ensure settings
+include a help string if this is the first time in the class hierarchy that
+they have been defined:
+
+{{ src('Plugin.update_settings:source') }}
+{{ src('Plugin._update_settings:source') }}
+
+One possible snag is that when data is loaded from a file there is no way to
+distinguish between a tuple and a list of length two, and a list of length two
+may either be the desired value of a setting, or the first element may be a
+helpstring and the second element may be the desired value. It is assumed that
+if the setting does not already exist, then a list of length 2 should be
+interpreted as a (helpstring, value,) tuple.
+
+Here's an example of a setting inheritance, here's a base class defining a
+`foo` setting:
+
+{{ test('TestSettingsBase:source') }}
+
+Here's a subclass which doesn't alter the setting:
+
+{{ test('NoSettingsOfMyOwn:source') }}
+{{ test('test_no_settings_of_my_own:source') }}
+
+Here's a subclass which does:
+
+{{ test('OverrideFooSetting:source') }}
+{{ test('test_override_settings:source') }}
+
+You can provide an `_unset` list to remove settings you no longer wish to be
+active:
+
+{{ test('UnsetFoo:source') }}
+{{ test('test_unsetting_settings:source') }}
+
+

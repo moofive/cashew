@@ -79,3 +79,54 @@ def test_register_plugins_from_dict():
 
     assert bar.setting('help') == "This is the bar plugin."
     assert altbar.setting('help') == "This is the bar plugin."
+
+
+class TestSettingsBase(Plugin):
+    """
+    Base class for settings class used in tests.
+    """
+    __metaclass__ = PluginMeta
+    _settings = {
+            'foo' : ("Foo setting", "This is value of foo set in TestSettingsBase")
+            }
+
+class NoSettingsOfMyOwn(TestSettingsBase):
+    """
+    A plugin which doesn't override foo.
+    """
+    aliases = ['nosettingsofmyown']
+
+def test_no_settings_of_my_own():
+    nosettingsofmyown = TestSettingsBase.create_instance('nosettingsofmyown')
+    assert nosettingsofmyown.setting('foo') == "This is value of foo set in TestSettingsBase"
+
+class OverrideFooSetting(TestSettingsBase):
+    """
+    A plugin which sets a different value for foo and also defines a new setting bar.
+    """
+    aliases = ['overridefoosetting']
+    _settings = {
+            'foo' : "I am overriding foo.",
+            'bar' : ("The bar setting.", "Default value for the bar setting.")
+            }
+
+def test_override_settings():
+    override = TestSettingsBase.create_instance('overridefoosetting')
+    assert override.setting('foo') == "I am overriding foo."
+    assert override.setting('bar') == "Default value for the bar setting."
+
+class UnsetFoo(TestSettingsBase):
+    """
+    A plugin which unsets the 'foo' setting.
+    """
+    _unset = ['foo']
+    aliases = ['unsetfoo']
+
+def test_unsetting_settings():
+    unsetfoo = TestSettingsBase.create_instance('unsetfoo')
+
+    try:
+        unsetfoo.setting('foo')
+        raise Exception("should not get here")
+    except UserFeedback as e:
+        assert str(e) == "No setting named 'foo'"

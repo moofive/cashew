@@ -24,24 +24,31 @@ class Plugin(object):
 
     def initialize_settings(self, **raw_kwargs):
         self._instance_settings = {}
+
+        self.initialize_settings_from_parents()
+        self.initialize_settings_from_other_classes()
+        self.initialize_settings_from_raw_kwargs(raw_kwargs)
+
+    def initialize_settings_from_parents(self):
         for parent_class in self.__class__.imro():
             if parent_class._settings:
-                self.__class__.class_update_settings(self, parent_class._settings)
-            if hasattr(parent_class, 'UNSET'):
-                for unset in parent_class.UNSET:
+                self._update_settings(parent_class._settings)
+            if hasattr(parent_class, '_unset'):
+                for unset in parent_class._unset:
                     del self._instance_settings[unset]
-
+    
+    def initialize_settings_from_other_classes(self):
         if hasattr(self.__class__, 'aliases') and self.__class__.aliases:
             alias = self.__class__.aliases[0]
             settings_from_other_classes = PluginMeta._store_other_class_settings.get(alias)
             if settings_from_other_classes:
-                self.__class__.class_update_settings(self, settings_from_other_classes)
+                self._update_settings(settings_from_other_classes)
 
-        # Apply raw_kwargs settings
+    def initialize_settings_from_raw_kwargs(self, raw_kwargs):
         hyphen_settings = dict((k, v) for k, v in raw_kwargs.items() if k in self._instance_settings)
         underscore_settings = dict((k.replace("_", "-"), v) for k, v in raw_kwargs.items() if k.replace("_", "-") in self._instance_settings)
-        self.__class__.class_update_settings(self, hyphen_settings)
-        self.__class__.class_update_settings(self, underscore_settings)
+        self._update_settings(hyphen_settings)
+        self._update_settings(underscore_settings)
 
     def safe_setting(self, name_hyphen, default=None):
         """
@@ -89,14 +96,54 @@ class Plugin(object):
 
     def setting_values(self, skip=None):
         """
-        Returns dict of all setting values (removes the helpstrings)
+        Returns dict of all setting values (removes the helpstrings).
         """
         if not skip:
             skip = []
         return dict((k, v[1]) for k, v in self._instance_settings.iteritems() if not k in skip)
 
     def update_settings(self, new_settings):
-        self.__class__.class_update_settings(self, new_settings, False)
+        """
+        Update settings for this instance based on the provided dictionary of
+        setting keys: setting values. Values should be a tuple of (helpstring,
+        value,) unless the setting has already been defined in a parent class,
+        in which case just pass the desired value.
+        """
+        self._update_settings(new_settings, False)
+
+    def _update_settings(self, new_settings, enforce_helpstring=True):
+        """
+        This method does the work of updating settings. Can be passed with
+        enforce_helpstring = False which you may want if allowing end users to
+        add arbitrary metadata via the settings system.
+
+        Preferable to use update_settings (without leading _) in code to do the
+        right thing and always have docstrings.
+        """
+        for raw_setting_name, value in new_settings.iteritems():
+            setting_name = raw_setting_name.replace("_", "-")
+
+            setting_already_exists = self._instance_settings.has_key(setting_name)
+            value_is_list_len_2 = isinstance(value, list) and len(value) == 2
+            treat_as_tuple = not setting_already_exists and value_is_list_len_2
+
+            if isinstance(value, tuple) or treat_as_tuple:
+                self._instance_settings[setting_name] = value
+
+            else:
+                if not self._instance_settings.has_key(setting_name):
+                    if enforce_helpstring:
+                        msg = "You must specify param '%s' as a tuple of (helpstring, value)"
+                        raise Exception(msg % key)
+
+                    else:
+                        # Create entry with blank helpstring.
+                        self._instance_settings[setting_name] = ('', value,)
+
+                else:
+                    # Save inherited helpstring, replace default value.
+                    orig = self._instance_settings[setting_name]
+                    self._instance_settings[setting_name] = (orig[0], value,)
 
 class PluginMeta(type):
     """
@@ -237,6 +284,13 @@ class PluginMeta(type):
     def adjust_alias(cls, alias):
         return alias
 
+    def imro(cls):
+        """
+        Returns MRO in reverse order, skipping 'object/type' class.
+        """
+        return reversed(inspect.getmro(cls)[0:-2])
+
+
     # documented above here
 
     def __iter__(cls, *instanceargs):
@@ -263,27 +317,3 @@ class PluginMeta(type):
         assert alias in keys
         return sorted(keys)[0]
 
-
-    def imro(cls):
-        """
-        Returns MRO in reverse order, skipping 'object/type' class.
-        """
-        return reversed(inspect.getmro(cls)[0:-2])
-
-    def class_update_settings(cls, instance, new_settings, enforce_helpstring=True):
-        for raw_key, value in new_settings.iteritems():
-            key = raw_key.replace("_", "-")
-            key_in_settings = instance._instance_settings.has_key(key)
-            value_is_list_len_2 = isinstance(value, list) and len(value) == 2
-            if isinstance(value, tuple) or (not key_in_settings and value_is_list_len_2):
-                instance._instance_settings[key] = value
-            else:
-                if not instance._instance_settings.has_key(key):
-                    if enforce_helpstring:
-                        raise Exception("You must specify param '%s' as a tuple of (helpstring, value)" % key)
-                    else:
-                        # TODO check and warn if key is similar to an existing key
-                        instance._instance_settings[key] = ('', value,)
-                else:
-                    orig = instance._instance_settings[key]
-                    instance._instance_settings[key] = (orig[0], value,)
