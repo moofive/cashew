@@ -211,6 +211,31 @@ class PluginMeta(type):
             yaml_content = yaml.safe_load(f.read())
         cls.register_plugins_from_dict(yaml_content)
 
+    def create_instance(cls, alias, *instanceargs, **instancekwargs):
+        alias = cls.adjust_alias(alias)
+
+        if not alias in cls.plugins:
+            msg = "no alias '%s' available for '%s'"
+            msgargs = (alias, cls.__name__)
+            raise NoPlugin(msg % msgargs)
+
+        class_or_class_name, settings = cls.plugins[alias]
+        klass = cls.get_reference_to_class(class_or_class_name)
+
+        instance = klass(*instanceargs, **instancekwargs)
+        instance.alias = alias
+
+        if not hasattr(instance, '_instance_settings'):
+            instance.initialize_settings()
+        instance.update_settings(settings)
+
+        if not instance.is_active():
+            raise InactivePlugin(alias)
+
+        return instance
+
+    def adjust_alias(cls, alias):
+        return alias
 
     # documented above here
 
@@ -262,26 +287,3 @@ class PluginMeta(type):
                 else:
                     orig = instance._instance_settings[key]
                     instance._instance_settings[key] = (orig[0], value,)
-
-    def create_instance(cls, alias, *instanceargs, **instancekwargs):
-        if alias.startswith('-'):
-            alias = '-'
-        elif not alias in cls.plugins:
-            msg = "no alias '%s' available for '%s'"
-            msgargs = (alias, cls.__name__)
-            raise NoPlugin(msg % msgargs)
-
-        class_or_class_name, settings = cls.plugins[alias]
-        klass = cls.get_reference_to_class(class_or_class_name)
-
-        instance = klass(*instanceargs, **instancekwargs)
-        instance.alias = alias
-
-        if not hasattr(instance, '_instance_settings'):
-            instance.initialize_settings()
-        instance.update_settings(settings)
-
-        if not instance.is_active():
-            raise InactivePlugin(alias)
-
-        return instance
