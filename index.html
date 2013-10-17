@@ -444,6 +444,7 @@ span.icon > [class^="icon-"], span.icon > [class*=" icon-"] { cursor: default; }
 <ul class="sectlevel2">
 <li><a href="#_plugin_registration_2">Plugin Registration</a></li>
 <li><a href="#_creating_instances">Creating Instances</a></li>
+<li><a href="#_retrieving_settings">Retrieving Settings</a></li>
 </ul>
 </li>
 </ul>
@@ -1503,13 +1504,14 @@ possible to iterate over an instance of each type of plugin.</p>
 <div class="content">
 <pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">__iter__</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-o">*</span><span class="tok-n">instanceargs</span><span class="tok-p">):</span>
         <span class="tok-sd">&quot;&quot;&quot;</span>
-<span class="tok-sd">        Lets you do &#39;for instance in Plugin&#39; and iterate over instances of all</span>
-<span class="tok-sd">        plugins. If there are multiple aliases, resulting plugin is only called</span>
-<span class="tok-sd">        once.</span>
+<span class="tok-sd">        Lets you iterate over instances of all plugins which are not marked as</span>
+<span class="tok-sd">        &#39;inactive&#39;. If there are multiple aliases, the resulting plugin is only</span>
+<span class="tok-sd">        called once.</span>
 <span class="tok-sd">        &quot;&quot;&quot;</span>
         <span class="tok-n">processed_aliases</span> <span class="tok-o">=</span> <span class="tok-nb">set</span><span class="tok-p">()</span>
         <span class="tok-k">for</span> <span class="tok-n">alias</span> <span class="tok-ow">in</span> <span class="tok-nb">sorted</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">plugins</span><span class="tok-p">):</span>
             <span class="tok-k">if</span> <span class="tok-n">alias</span> <span class="tok-ow">in</span> <span class="tok-n">processed_aliases</span><span class="tok-p">:</span>
+                <span class="tok-c"># duplicate alias</span>
                 <span class="tok-k">continue</span>
 
             <span class="tok-k">try</span><span class="tok-p">:</span>
@@ -1532,12 +1534,95 @@ possible to iterate over an instance of each type of plugin.</p>
 </div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="_retrieving_settings">Retrieving Settings</h3>
+<div class="paragraph">
+<p>Individual setting values should be obtained by calling the <code>setting</code> method:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">setting</span><span class="tok-p">(</span><span class="tok-bp">self</span><span class="tok-p">,</span> <span class="tok-n">name_hyphen</span><span class="tok-p">):</span>
+        <span class="tok-sd">&quot;&quot;&quot;</span>
+<span class="tok-sd">        Retrieves the setting value whose name is indicated by name_hyphen.</span>
+
+<span class="tok-sd">        Values starting with $ are assumed to reference environment variables,</span>
+<span class="tok-sd">        and the value stored in environment variables is retrieved. It&#39;s an</span>
+<span class="tok-sd">        error if thes corresponding environment variable it not set.</span>
+<span class="tok-sd">        &quot;&quot;&quot;</span>
+        <span class="tok-k">if</span> <span class="tok-n">name_hyphen</span> <span class="tok-ow">in</span> <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">_instance_settings</span><span class="tok-p">:</span>
+            <span class="tok-n">value</span> <span class="tok-o">=</span> <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">_instance_settings</span><span class="tok-p">[</span><span class="tok-n">name_hyphen</span><span class="tok-p">][</span><span class="tok-mi">1</span><span class="tok-p">]</span>
+        <span class="tok-k">else</span><span class="tok-p">:</span>
+            <span class="tok-n">name_underscore</span> <span class="tok-o">=</span> <span class="tok-n">name_hyphen</span><span class="tok-o">.</span><span class="tok-n">replace</span><span class="tok-p">(</span><span class="tok-s">&quot;-&quot;</span><span class="tok-p">,</span> <span class="tok-s">&quot;_&quot;</span><span class="tok-p">)</span>
+            <span class="tok-k">if</span> <span class="tok-n">name_underscore</span> <span class="tok-ow">in</span> <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">_instance_settings</span><span class="tok-p">:</span>
+                <span class="tok-n">value</span> <span class="tok-o">=</span> <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">_instance_settings</span><span class="tok-p">[</span><span class="tok-n">name_underscore</span><span class="tok-p">][</span><span class="tok-mi">1</span><span class="tok-p">]</span>
+            <span class="tok-k">else</span><span class="tok-p">:</span>
+                <span class="tok-k">if</span> <span class="tok-n">name_underscore</span> <span class="tok-o">==</span> <span class="tok-n">name_hyphen</span><span class="tok-p">:</span>
+                    <span class="tok-n">msg</span> <span class="tok-o">=</span> <span class="tok-s">&quot;No setting named &#39;</span><span class="tok-si">%s</span><span class="tok-s">&#39;&quot;</span> <span class="tok-o">%</span> <span class="tok-n">name_hyphen</span>
+                <span class="tok-k">else</span><span class="tok-p">:</span>
+                    <span class="tok-n">msg</span> <span class="tok-o">=</span> <span class="tok-s">&quot;no setting named &#39;</span><span class="tok-si">%s</span><span class="tok-s">&#39; or &#39;</span><span class="tok-si">%s</span><span class="tok-s">&#39;&quot;</span>
+                    <span class="tok-n">msg</span> <span class="tok-o">=</span> <span class="tok-n">msg</span> <span class="tok-o">%</span> <span class="tok-p">(</span><span class="tok-n">name_hyphen</span><span class="tok-p">,</span> <span class="tok-n">name_underscore</span><span class="tok-p">)</span>
+                <span class="tok-k">raise</span> <span class="tok-n">UserFeedback</span><span class="tok-p">(</span><span class="tok-n">msg</span><span class="tok-p">)</span>
+
+        <span class="tok-k">if</span> <span class="tok-nb">hasattr</span><span class="tok-p">(</span><span class="tok-n">value</span><span class="tok-p">,</span> <span class="tok-s">&#39;startswith&#39;</span><span class="tok-p">)</span> <span class="tok-ow">and</span> <span class="tok-n">value</span><span class="tok-o">.</span><span class="tok-n">startswith</span><span class="tok-p">(</span><span class="tok-s">&quot;$&quot;</span><span class="tok-p">):</span>
+            <span class="tok-n">env_var</span> <span class="tok-o">=</span> <span class="tok-n">value</span><span class="tok-o">.</span><span class="tok-n">lstrip</span><span class="tok-p">(</span><span class="tok-s">&quot;$&quot;</span><span class="tok-p">)</span>
+            <span class="tok-k">if</span> <span class="tok-n">os</span><span class="tok-o">.</span><span class="tok-n">environ</span><span class="tok-o">.</span><span class="tok-n">has_key</span><span class="tok-p">(</span><span class="tok-n">env_var</span><span class="tok-p">):</span>
+                <span class="tok-k">return</span> <span class="tok-n">os</span><span class="tok-o">.</span><span class="tok-n">getenv</span><span class="tok-p">(</span><span class="tok-n">env_var</span><span class="tok-p">)</span>
+            <span class="tok-k">else</span><span class="tok-p">:</span>
+                <span class="tok-n">msg</span> <span class="tok-o">=</span> <span class="tok-s">&quot;&#39;</span><span class="tok-si">%s</span><span class="tok-s">&#39; is not defined in your environment&quot;</span> <span class="tok-o">%</span> <span class="tok-n">env_var</span>
+                <span class="tok-k">raise</span> <span class="tok-n">UserFeedback</span><span class="tok-p">(</span><span class="tok-n">msg</span><span class="tok-p">)</span>
+
+        <span class="tok-k">elif</span> <span class="tok-nb">hasattr</span><span class="tok-p">(</span><span class="tok-n">value</span><span class="tok-p">,</span> <span class="tok-s">&#39;startswith&#39;</span><span class="tok-p">)</span> <span class="tok-ow">and</span> <span class="tok-n">value</span><span class="tok-o">.</span><span class="tok-n">startswith</span><span class="tok-p">(</span><span class="tok-s">&quot;\$&quot;</span><span class="tok-p">):</span>
+            <span class="tok-k">return</span> <span class="tok-n">value</span><span class="tok-o">.</span><span class="tok-n">replace</span><span class="tok-p">(</span><span class="tok-s">&quot;\$&quot;</span><span class="tok-p">,</span> <span class="tok-s">&quot;$&quot;</span><span class="tok-p">)</span>
+
+        <span class="tok-k">else</span><span class="tok-p">:</span>
+            <span class="tok-k">return</span> <span class="tok-n">value</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If you don&#8217;t want a UserFeedback exception raised if the setting you ask for
+doesn&#8217;t exist, you can use the <code>safe_setting</code> method instead:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">safe_setting</span><span class="tok-p">(</span><span class="tok-bp">self</span><span class="tok-p">,</span> <span class="tok-n">name_hyphen</span><span class="tok-p">,</span> <span class="tok-n">default</span><span class="tok-o">=</span><span class="tok-bp">None</span><span class="tok-p">):</span>
+        <span class="tok-sd">&quot;&quot;&quot;</span>
+<span class="tok-sd">        Retrieves the setting value, but returns a default value rather than</span>
+<span class="tok-sd">        raising an error if the setting does not exist.</span>
+<span class="tok-sd">        &quot;&quot;&quot;</span>
+        <span class="tok-k">try</span><span class="tok-p">:</span>
+            <span class="tok-k">return</span> <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">setting</span><span class="tok-p">(</span><span class="tok-n">name_hyphen</span><span class="tok-p">)</span>
+        <span class="tok-k">except</span> <span class="tok-n">UserFeedback</span><span class="tok-p">:</span>
+            <span class="tok-k">return</span> <span class="tok-n">default</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>setting_values</code> method returns a dictionary of all setting values:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">setting_values</span><span class="tok-p">(</span><span class="tok-bp">self</span><span class="tok-p">,</span> <span class="tok-n">skip</span><span class="tok-o">=</span><span class="tok-bp">None</span><span class="tok-p">):</span>
+        <span class="tok-sd">&quot;&quot;&quot;</span>
+<span class="tok-sd">        Returns dict of all setting values (removes the helpstrings).</span>
+<span class="tok-sd">        &quot;&quot;&quot;</span>
+        <span class="tok-k">if</span> <span class="tok-ow">not</span> <span class="tok-n">skip</span><span class="tok-p">:</span>
+            <span class="tok-n">skip</span> <span class="tok-o">=</span> <span class="tok-p">[]</span>
+
+        <span class="tok-k">return</span> <span class="tok-nb">dict</span><span class="tok-p">(</span>
+                <span class="tok-p">(</span><span class="tok-n">k</span><span class="tok-p">,</span> <span class="tok-n">v</span><span class="tok-p">[</span><span class="tok-mi">1</span><span class="tok-p">])</span>
+                <span class="tok-k">for</span> <span class="tok-n">k</span><span class="tok-p">,</span> <span class="tok-n">v</span> <span class="tok-ow">in</span> <span class="tok-bp">self</span><span class="tok-o">.</span><span class="tok-n">_instance_settings</span><span class="tok-o">.</span><span class="tok-n">iteritems</span><span class="tok-p">()</span>
+                <span class="tok-k">if</span> <span class="tok-ow">not</span> <span class="tok-n">k</span> <span class="tok-ow">in</span> <span class="tok-n">skip</span><span class="tok-p">)</span>
+</code></pre>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2013-10-17 14:20:27 PDT
+Last updated 2013-10-17 14:37:58 PDT
 </div>
 </div>
 </body>
