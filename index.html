@@ -430,13 +430,19 @@ span.icon > [class^="icon-"], span.icon > [class*=" icon-"] { cursor: default; }
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
 <li><a href="#_introduction">Introduction</a></li>
-<li><a href="#_usage_guide">Usage Guide</a></li>
+<li><a href="#_basic_usage">Basic Usage</a></li>
 <li>
 <ul class="sectlevel2">
 <li><a href="#_creating_a_base_class">Creating a Base Class</a></li>
 <li><a href="#_plugin_registration">Plugin Registration</a></li>
 <li><a href="#_basic_subclassing_example">Basic Subclassing Example</a></li>
 <li><a href="#_settings">Settings</a></li>
+</ul>
+</li>
+<li><a href="#_implementation_details">Implementation Details</a></li>
+<li>
+<ul class="sectlevel2">
+<li><a href="#_plugin_registration_2">Plugin Registration</a></li>
 </ul>
 </li>
 </ul>
@@ -467,7 +473,7 @@ configuration.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_usage_guide">Usage Guide</h2>
+<h2 id="_basic_usage">Basic Usage</h2>
 <div class="sectionbody">
 <div class="sect2">
 <h3 id="_creating_a_base_class">Creating a Base Class</h3>
@@ -527,7 +533,7 @@ several others are implemented via plugins.</p>
         <span class="tok-k">assert</span> <span class="tok-nb">issubclass</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-n">Plugin</span><span class="tok-p">),</span> <span class="tok-s">&quot;</span><span class="tok-si">%s</span><span class="tok-s"> should inherit from class Plugin&quot;</span> <span class="tok-o">%</span> <span class="tok-n">name</span>
         <span class="tok-k">if</span> <span class="tok-s">&#39;__metaclass__&#39;</span> <span class="tok-ow">in</span> <span class="tok-n">attrs</span><span class="tok-p">:</span>
             <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">plugins</span> <span class="tok-o">=</span> <span class="tok-p">{}</span>
-        <span class="tok-k">if</span> <span class="tok-nb">hasattr</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-s">&#39;aliases&#39;</span><span class="tok-p">):</span>
+        <span class="tok-k">elif</span> <span class="tok-nb">hasattr</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-s">&#39;aliases&#39;</span><span class="tok-p">):</span>
             <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">register_plugin</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">aliases</span><span class="tok-p">,</span> <span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-p">{})</span>
 </code></pre>
 </div>
@@ -807,10 +813,167 @@ the <code>csv</code> library, while the <code>write-header</code> setting is use
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="_implementation_details">Implementation Details</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_plugin_registration_2">Plugin Registration</h3>
+<div class="paragraph">
+<p>Let&#8217;s review the <code>__init__</code> method and follow the methods it calls.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">__init__</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-n">name</span><span class="tok-p">,</span> <span class="tok-n">bases</span><span class="tok-p">,</span> <span class="tok-n">attrs</span><span class="tok-p">):</span>
+        <span class="tok-k">assert</span> <span class="tok-nb">issubclass</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-n">Plugin</span><span class="tok-p">),</span> <span class="tok-s">&quot;</span><span class="tok-si">%s</span><span class="tok-s"> should inherit from class Plugin&quot;</span> <span class="tok-o">%</span> <span class="tok-n">name</span>
+        <span class="tok-k">if</span> <span class="tok-s">&#39;__metaclass__&#39;</span> <span class="tok-ow">in</span> <span class="tok-n">attrs</span><span class="tok-p">:</span>
+            <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">plugins</span> <span class="tok-o">=</span> <span class="tok-p">{}</span>
+        <span class="tok-k">elif</span> <span class="tok-nb">hasattr</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-s">&#39;aliases&#39;</span><span class="tok-p">):</span>
+            <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">register_plugin</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">aliases</span><span class="tok-p">,</span> <span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-p">{})</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The first line asserts that our plugin class inherits from <code>Plugin</code>. If this
+were not the case then lots of expected behavior wouldn&#8217;t work.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python"><span class="tok-k">def</span> <span class="tok-nf">test_must_inherit_from_plugin_class</span><span class="tok-p">():</span>
+    <span class="tok-k">try</span><span class="tok-p">:</span>
+        <span class="tok-k">class</span> <span class="tok-nc">BadPlugin</span><span class="tok-p">(</span><span class="tok-nb">object</span><span class="tok-p">):</span>
+            <span class="tok-n">__metaclass__</span> <span class="tok-o">=</span> <span class="tok-n">PluginMeta</span>
+
+        <span class="tok-k">raise</span> <span class="tok-ne">Exception</span><span class="tok-p">(</span><span class="tok-s">&quot;should not get here&quot;</span><span class="tok-p">)</span>
+
+    <span class="tok-k">except</span> <span class="tok-ne">AssertionError</span> <span class="tok-k">as</span> <span class="tok-n">e</span><span class="tok-p">:</span>
+        <span class="tok-k">assert</span> <span class="tok-nb">str</span><span class="tok-p">(</span><span class="tok-n">e</span><span class="tok-p">)</span> <span class="tok-o">==</span> <span class="tok-s">&quot;BadPlugin should inherit from class Plugin&quot;</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In the next two lines, if we detect <code>__metaclass__</code> in the class attributes
+then we are creating a plugin base class, and so we want to initialize a
+plugins dictionary. If not, then we have already created a base class and we
+are creating a plugin subclass. In this case, if there are aliases specified,
+we call the <code>register_plugin</code> method.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">register_plugin</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-n">alias_or_aliases</span><span class="tok-p">,</span> <span class="tok-n">class_or_class_name</span><span class="tok-p">,</span> <span class="tok-n">settings</span><span class="tok-p">):</span>
+        <span class="tok-n">aliases</span> <span class="tok-o">=</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">standardize_alias_or_aliases</span><span class="tok-p">(</span><span class="tok-n">alias_or_aliases</span><span class="tok-p">)</span>
+        <span class="tok-n">klass</span> <span class="tok-o">=</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">get_reference_to_class</span><span class="tok-p">(</span><span class="tok-n">class_or_class_name</span><span class="tok-p">)</span>
+
+        <span class="tok-c"># Ensure &#39;aliases&#39; and &#39;help&#39; settings are set.</span>
+        <span class="tok-n">settings</span><span class="tok-p">[</span><span class="tok-s">&#39;aliases&#39;</span><span class="tok-p">]</span> <span class="tok-o">=</span> <span class="tok-p">(</span><span class="tok-s">&#39;aliases&#39;</span><span class="tok-p">,</span> <span class="tok-n">aliases</span><span class="tok-p">)</span>
+        <span class="tok-k">if</span> <span class="tok-ow">not</span> <span class="tok-n">settings</span><span class="tok-o">.</span><span class="tok-n">has_key</span><span class="tok-p">(</span><span class="tok-s">&#39;help&#39;</span><span class="tok-p">):</span>
+            <span class="tok-n">docstring</span> <span class="tok-o">=</span> <span class="tok-n">klass</span><span class="tok-o">.</span><span class="tok-n">check_docstring</span><span class="tok-p">()</span>
+            <span class="tok-n">settings</span><span class="tok-p">[</span><span class="tok-s">&#39;help&#39;</span><span class="tok-p">]</span> <span class="tok-o">=</span> <span class="tok-p">(</span><span class="tok-s">&quot;Helpstring for plugin.&quot;</span><span class="tok-p">,</span> <span class="tok-n">docstring</span><span class="tok-p">)</span>
+
+        <span class="tok-c"># Create the tuple which will be registered for the plugin.</span>
+        <span class="tok-n">class_info</span> <span class="tok-o">=</span> <span class="tok-p">(</span><span class="tok-n">class_or_class_name</span><span class="tok-p">,</span> <span class="tok-n">settings</span><span class="tok-p">)</span>
+
+        <span class="tok-c"># Register the class_info tuple for each alias.</span>
+        <span class="tok-k">for</span> <span class="tok-n">alias</span> <span class="tok-ow">in</span> <span class="tok-n">aliases</span><span class="tok-p">:</span>
+            <span class="tok-k">if</span> <span class="tok-nb">isinstance</span><span class="tok-p">(</span><span class="tok-n">class_or_class_name</span><span class="tok-p">,</span> <span class="tok-nb">type</span><span class="tok-p">):</span>
+                <span class="tok-n">modname</span> <span class="tok-o">=</span> <span class="tok-n">class_or_class_name</span><span class="tok-o">.</span><span class="tok-n">__module__</span>
+                <span class="tok-n">alias</span> <span class="tok-o">=</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">apply_prefix</span><span class="tok-p">(</span><span class="tok-n">modname</span><span class="tok-p">,</span> <span class="tok-n">alias</span><span class="tok-p">)</span>
+
+            <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">plugins</span><span class="tok-p">[</span><span class="tok-n">alias</span><span class="tok-p">]</span> <span class="tok-o">=</span> <span class="tok-n">class_info</span>
+
+        <span class="tok-c"># Register any settings defined for other classes.</span>
+        <span class="tok-k">if</span> <span class="tok-nb">hasattr</span><span class="tok-p">(</span><span class="tok-n">klass</span><span class="tok-p">,</span> <span class="tok-s">&#39;_other_class_settings&#39;</span><span class="tok-p">)</span> <span class="tok-ow">and</span> <span class="tok-n">klass</span><span class="tok-o">.</span><span class="tok-n">_other_class_settings</span><span class="tok-p">:</span>
+            <span class="tok-n">PluginMeta</span><span class="tok-o">.</span><span class="tok-n">_store_other_class_settings</span><span class="tok-o">.</span><span class="tok-n">update</span><span class="tok-p">(</span><span class="tok-n">klass</span><span class="tok-o">.</span><span class="tok-n">_other_class_settings</span><span class="tok-p">)</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The register plugin method may receive a list of aliases or a single alias, and it may receive a class name or an actual class. The first thing it does is standardize each of these.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">standardize_alias_or_aliases</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-n">alias_or_aliases</span><span class="tok-p">):</span>
+        <span class="tok-sd">&quot;&quot;&quot;</span>
+<span class="tok-sd">        Make sure we don&#39;t attempt to iterate over an alias string thinking</span>
+<span class="tok-sd">        it&#39;s an array.</span>
+<span class="tok-sd">        &quot;&quot;&quot;</span>
+        <span class="tok-k">if</span> <span class="tok-nb">isinstance</span><span class="tok-p">(</span><span class="tok-n">alias_or_aliases</span><span class="tok-p">,</span> <span class="tok-nb">basestring</span><span class="tok-p">):</span>
+            <span class="tok-k">return</span> <span class="tok-p">[</span><span class="tok-n">alias_or_aliases</span><span class="tok-p">]</span>
+        <span class="tok-k">else</span><span class="tok-p">:</span>
+            <span class="tok-k">return</span> <span class="tok-n">alias_or_aliases</span>
+</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-k">def</span> <span class="tok-nf">get_reference_to_class</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-n">class_or_class_name</span><span class="tok-p">):</span>
+        <span class="tok-sd">&quot;&quot;&quot;</span>
+<span class="tok-sd">        Detect if we get a class or a name, convert a name to a class.</span>
+<span class="tok-sd">        &quot;&quot;&quot;</span>
+        <span class="tok-k">if</span> <span class="tok-nb">isinstance</span><span class="tok-p">(</span><span class="tok-n">class_or_class_name</span><span class="tok-p">,</span> <span class="tok-nb">type</span><span class="tok-p">):</span>
+            <span class="tok-k">return</span> <span class="tok-n">class_or_class_name</span>
+
+        <span class="tok-k">elif</span> <span class="tok-nb">isinstance</span><span class="tok-p">(</span><span class="tok-n">class_or_class_name</span><span class="tok-p">,</span> <span class="tok-nb">basestring</span><span class="tok-p">):</span>
+            <span class="tok-k">if</span> <span class="tok-s">&quot;:&quot;</span> <span class="tok-ow">in</span> <span class="tok-n">class_or_class_name</span><span class="tok-p">:</span>
+                <span class="tok-n">mod_name</span><span class="tok-p">,</span> <span class="tok-n">class_name</span> <span class="tok-o">=</span> <span class="tok-n">class_or_class_name</span><span class="tok-o">.</span><span class="tok-n">split</span><span class="tok-p">(</span><span class="tok-s">&quot;:&quot;</span><span class="tok-p">)</span>
+
+                <span class="tok-c"># load the module</span>
+                <span class="tok-k">if</span> <span class="tok-ow">not</span> <span class="tok-n">mod_name</span> <span class="tok-ow">in</span> <span class="tok-n">sys</span><span class="tok-o">.</span><span class="tok-n">modules</span><span class="tok-p">:</span>
+                    <span class="tok-nb">__import__</span><span class="tok-p">(</span><span class="tok-n">mod_name</span><span class="tok-p">)</span>
+                <span class="tok-n">mod</span> <span class="tok-o">=</span> <span class="tok-n">sys</span><span class="tok-o">.</span><span class="tok-n">modules</span><span class="tok-p">[</span><span class="tok-n">mod_name</span><span class="tok-p">]</span>
+
+                <span class="tok-k">return</span> <span class="tok-n">mod</span><span class="tok-o">.</span><span class="tok-n">__dict__</span><span class="tok-p">[</span><span class="tok-n">class_name</span><span class="tok-p">]</span>
+            <span class="tok-k">else</span><span class="tok-p">:</span>
+                <span class="tok-k">return</span> <span class="tok-n">cls</span><span class="tok-o">.</span><span class="tok-n">load_class_from_locals</span><span class="tok-p">(</span><span class="tok-n">class_or_class_name</span><span class="tok-p">)</span>
+
+        <span class="tok-k">else</span><span class="tok-p">:</span>
+            <span class="tok-n">msg</span> <span class="tok-o">=</span> <span class="tok-s">&quot;Unexpected Type &#39;</span><span class="tok-si">%s</span><span class="tok-s">&#39;&quot;</span> <span class="tok-o">%</span> <span class="tok-nb">type</span><span class="tok-p">(</span><span class="tok-n">class_or_class_name</span><span class="tok-p">)</span>
+            <span class="tok-k">raise</span> <span class="tok-n">InternalCashewException</span><span class="tok-p">(</span><span class="tok-n">msg</span><span class="tok-p">)</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>get_reference_to_class</code> method will load a fully qualified class name automatically:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python"><span class="tok-k">def</span> <span class="tok-nf">test_get_reference_to_qualified_class</span><span class="tok-p">():</span>
+    <span class="tok-n">pygments_filter_class</span> <span class="tok-o">=</span> <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">get_reference_to_class</span><span class="tok-p">(</span><span class="tok-s">&quot;dexy.filters.pyg:PygmentsFilter&quot;</span><span class="tok-p">)</span>
+    <span class="tok-k">assert</span> <span class="tok-n">pygments_filter_class</span><span class="tok-o">.</span><span class="tok-n">__name__</span> <span class="tok-o">==</span> <span class="tok-s">&quot;PygmentsFilter&quot;</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If you want to be able to specify an unqualified class name then you need to
+establish a mapping between class names and class objects in a
+<code>load_class_from_locals</code> method, here&#8217;s one way to do this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python">    <span class="tok-nd">@classmethod</span>
+    <span class="tok-k">def</span> <span class="tok-nf">load_class_from_locals</span><span class="tok-p">(</span><span class="tok-n">cls</span><span class="tok-p">,</span> <span class="tok-n">class_name</span><span class="tok-p">):</span>
+        <span class="tok-kn">from</span> <span class="tok-nn">example.classes1</span> <span class="tok-kn">import</span> <span class="tok-o">*</span>
+        <span class="tok-k">return</span> <span class="tok-nb">locals</span><span class="tok-p">()[</span><span class="tok-n">class_name</span><span class="tok-p">]</span>
+</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>And this allows you to do:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code class="python language-python"><span class="tok-k">def</span> <span class="tok-nf">test_get_reference_to_class</span><span class="tok-p">():</span>
+    <span class="tok-k">assert</span> <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">get_reference_to_class</span><span class="tok-p">(</span><span class="tok-n">Csv</span><span class="tok-p">)</span> <span class="tok-o">==</span> <span class="tok-n">Csv</span>
+    <span class="tok-k">assert</span> <span class="tok-n">Data</span><span class="tok-o">.</span><span class="tok-n">get_reference_to_class</span><span class="tok-p">(</span><span class="tok-s">&quot;Csv&quot;</span><span class="tok-p">)</span> <span class="tok-o">==</span> <span class="tok-n">Csv</span>
+</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2013-10-15 20:51:55 PDT
+Last updated 2013-10-16 21:12:19 PDT
 </div>
 </div>
 </body>
