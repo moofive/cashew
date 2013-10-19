@@ -36,10 +36,11 @@ class Plugin(object):
     
     def initialize_settings_from_other_classes(self):
         if hasattr(self.__class__, 'aliases') and self.__class__.aliases:
-            alias = self.__class__.aliases[0]
-            settings_from_other_classes = PluginMeta._store_other_class_settings.get(alias)
-            if settings_from_other_classes:
-                self.update_settings(settings_from_other_classes)
+            for parent_class in self.__class__.imro():
+                for alias in parent_class.aliases:
+                    settings_from_other_classes = PluginMeta._store_other_class_settings.get(alias)
+                    if settings_from_other_classes:
+                        self.update_settings(settings_from_other_classes)
 
     def initialize_settings_from_raw_kwargs(self, raw_kwargs):
         hyphen_settings = dict(
@@ -76,16 +77,8 @@ class Plugin(object):
         if name_hyphen in self._instance_settings:
             value = self._instance_settings[name_hyphen][1]
         else:
-            name_underscore = name_hyphen.replace("-", "_")
-            if name_underscore in self._instance_settings:
-                value = self._instance_settings[name_underscore][1]
-            else:
-                if name_underscore == name_hyphen:
-                    msg = "No setting named '%s'" % name_hyphen
-                else:
-                    msg = "no setting named '%s' or '%s'"
-                    msg = msg % (name_hyphen, name_underscore)
-                raise UserFeedback(msg)
+            msg = "No setting named '%s'" % name_hyphen
+            raise UserFeedback(msg)
 
         if hasattr(value, 'startswith') and value.startswith("$"):
             env_var = value.lstrip("$")
@@ -145,7 +138,7 @@ class Plugin(object):
                 if not self._instance_settings.has_key(setting_name):
                     if enforce_helpstring:
                         msg = "You must specify param '%s' as a tuple of (helpstring, value)"
-                        raise Exception(msg % key)
+                        raise InternalCashewException(msg % setting_name)
 
                     else:
                         # Create entry with blank helpstring.
@@ -164,10 +157,21 @@ class PluginMeta(type):
 
     def __init__(cls, name, bases, attrs):
         assert issubclass(cls, Plugin), "%s should inherit from class Plugin" % name
+
         if '__metaclass__' in attrs:
             cls.plugins = {}
         elif hasattr(cls, 'aliases'):
             cls.register_plugin(cls.aliases, cls, {})
+
+        cls.register_other_class_settings()
+
+    def register_other_class_settings(cls):
+        if hasattr(cls, '_other_class_settings') and cls._other_class_settings:
+            for other_class_key, other_class_settings in cls._other_class_settings.iteritems():
+                if not PluginMeta._store_other_class_settings.has_key(other_class_key):
+                    PluginMeta._store_other_class_settings[other_class_key] = {}
+
+                PluginMeta._store_other_class_settings[other_class_key].update(other_class_settings)
 
     def register_plugin(cls, alias_or_aliases, class_or_class_name, settings):
         aliases = cls.standardize_alias_or_aliases(alias_or_aliases)
@@ -189,10 +193,6 @@ class PluginMeta(type):
                 alias = cls.apply_prefix(modname, alias)
 
             cls.plugins[alias] = class_info
-
-        # Register any settings defined for other classes.
-        if hasattr(klass, '_other_class_settings') and klass._other_class_settings:
-            PluginMeta._store_other_class_settings.update(klass._other_class_settings)
 
     def standardize_alias_or_aliases(cls, alias_or_aliases):
         """
