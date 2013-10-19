@@ -179,9 +179,17 @@ def test_retrieve_environment_variables():
     data.update_settings({ "working-dir" : ("The current working directory.", "$PWD")})
     assert 'cashew' in data.setting('working-dir')
 
+def test_error_if_no_env_var():
+    data = Data.create_instance('csv', None)
+    data.update_settings({ "fake-env-var" : ("", "$DOESNOTEXIST")})
+    try:
+        data.setting('fake-env-var')
+    except UserFeedback as e:
+        assert str(e) == "'DOESNOTEXIST' is not defined in your environment"
+
 def test_escaped_dollar_sign():
     data = Data.create_instance('csv', None)
-    data.update_settings({ "not-a-var" : ("This is not an environmetn variable.", "\$PWD")})
+    data.update_settings({ "not-a-var" : ("This is not an environment variable.", "\$PWD")})
     assert data.setting('not-a-var') == "$PWD"
 
 def test_invalid_get_ref_to_class():

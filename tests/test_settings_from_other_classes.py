@@ -4,7 +4,7 @@ class Report(Plugin):
     __metaclass__ = PluginMeta
     _settings = {}
     _other_class_settings = {
-            'doc' : {
+            'document' : {
                 'bar' : ("Bar setting.", None)
                 }
             }
@@ -13,14 +13,14 @@ class Filter(Plugin):
     __metaclass__ = PluginMeta
     _settings = {}
     _other_class_settings = {
-            'doc' : {
+            'document' : {
                 'foo' : ("Foo setting", None)
                 }
             }
 
 class Document(Plugin):
     __metaclass__ = PluginMeta
-    aliases = ['doc']
+    aliases = ['document']
 
 class SomeKindOfDocument(Document):
     """
@@ -29,6 +29,6 @@ class SomeKindOfDocument(Document):
     aliases = ['somekind']
 
 def test_other_class_settings():
-    assert sorted(PluginMeta._store_other_class_settings['doc']) == ['bar', 'foo']
+    assert sorted(PluginMeta._store_other_class_settings['document']) == ['bar', 'foo']
     x = Document.create_instance('somekind')
     assert sorted(x.setting_values()) ==  ['aliases', 'bar', 'foo', 'help']

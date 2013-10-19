@@ -12,7 +12,14 @@
 {% macro test(section, language="python") %}
 [source,{{ language }}]
 ----
-{{ d['/tests/test_plugin_meta.py|pydoc'][section] }}
+{{ d['/tests/test_cashew.py|pydoc'][section] }}
+----
+{% endmacro %}
+
+{% macro test2(section, language="python") %}
+[source,{{ language }}]
+----
+{{ d['/tests/test_settings_from_other_classes.py|pydoc'][section] }}
 ----
 {% endmacro %}
 
@@ -157,6 +164,34 @@ the `csv` library, while the `write-header` setting is used to determine if the
 `writeheader()` method will be called.
 
 {{ d['classes2.py|idio|asciisyn']['csv-present'] }}
+
+=== Settings for Other Classes
+
+You may want to define a plugin which defines a new setting on a different plugin class.
+
+For example in dexy, the website reporter defines some extra parameters on the
+Document class so that you can specify for each document which website template
+you'd like to use.
+
+Here is a Report base class which defines an additional setting named `bar` on a class with alias `document`:
+
+{{ test2("Report:source") }}
+
+And also a Filter base class which defines a `foo` setting:
+
+{{ test2("Filter:source") }}
+
+On the Document class, which has alias `document`, there are no settings defined:
+
+{{ test2("Document:source") }}
+
+We create a plugin SomeKindOfDocument which is a Document:
+
+{{ test2("SomeKindOfDocument:source") }}
+
+And, we see that the `foo` and `bar` settings are available, even though these were not defined in Document or SomeKindOfDocument:
+
+{{ test2("test_other_class_settings:source") }}
 
 == Implementation Details
 
@@ -365,6 +400,21 @@ doesn't exist, you can use the `safe_setting` method instead:
 
 {{ src('Plugin.safe_setting:source') }}
 
+{{ test('test_safe_setting:source') }}
+
 The `setting_values` method returns a dictionary of all setting values:
 
 {{ src('Plugin.setting_values:source') }}
+
+If a setting starts with a dollar sign, it is assumed to be an environment variable, and the `setting` method will retreive the value of that environment variable.
+
+{{ test('test_retrieve_environment_variables:source') }}
+
+If there is no corresponding env var defined, a `UserFeedback` exception is raised:
+
+{{ test('test_error_if_no_env_var:source') }}
+
+If you actually need to start a value with a dollar sign, you can escape it:
+
+{{ test('test_escaped_dollar_sign:source') }}
+
