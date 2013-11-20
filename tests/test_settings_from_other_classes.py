@@ -31,4 +31,4 @@ class SomeKindOfDocument(Document):
 def test_other_class_settings():
     assert sorted(PluginMeta._store_other_class_settings['document']) == ['bar', 'foo']
     x = Document.create_instance('somekind')
-    assert sorted(x.setting_values()) ==  ['aliases', 'bar', 'foo', 'help']
+    assert sorted(x.setting_values()) ==  ['aliases', 'bar', 'foo', 'help', 'install-dir']

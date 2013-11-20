@@ -8,7 +8,8 @@ class UserFeedback(CashewException):
     pass
 
 class InactivePlugin(UserFeedback):
-    pass
+    def __init__(self, plugin_instance):
+        self.message = plugin_instance.alias
 
 class NoPlugin(UserFeedback):
     pass

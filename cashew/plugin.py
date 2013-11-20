@@ -11,7 +11,10 @@ class Plugin(object):
     Base class for plugins. Define instance methods shared by plugins here.
     """
     aliases = []
-    _settings = {}
+    _class_settings = { "max-docstring-length" : None }
+    _settings = {
+            "install-dir" : ("Location where the plugin was defined.", None)
+            }
 
     def is_active(self):
         return True
@@ -155,6 +158,9 @@ class PluginMeta(type):
     """
     _store_other_class_settings = {} # allow plugins to define settings for other classes
 
+    def __lt__(cls, other):
+        return cls.__name__ < other.__name__
+
     def __init__(cls, name, bases, attrs):
         assert issubclass(cls, Plugin), "%s should inherit from class Plugin" % name
 
@@ -241,6 +247,15 @@ class PluginMeta(type):
             msg = "docstring required for plugin '%s' (%s, defined in %s)"
             args = (cls.__name__, breadcrumbs, cls.__module__)
             raise InternalCashewException(msg % args)
+
+        max_line_length = cls._class_settings.get('max-docstring-length')
+        if max_line_length:
+            for i, line in enumerate(docstring.splitlines()):
+                if len(line) > max_line_length:
+                    msg = "line %s of %s is %s chars too long" 
+                    args = (i, cls.__name__, len(line) - max_line_length)
+                    raise Exception(msg % args)
+
         return docstring
 
     def apply_prefix(cls, modname, alias):
@@ -250,24 +265,27 @@ class PluginMeta(type):
         for k, v in plugin_info.iteritems():
             cls.register_plugin(k.split("|"), v[0], v[1])
 
-    def register_plugins_from_dict(cls, yaml_content):
+    def register_plugins_from_dict(cls, yaml_content, install_dir=None):
         for alias, info_dict in yaml_content.iteritems():
             if ":" in alias:
                 _, alias = alias.split(":")
 
-            if not info_dict.has_key('class'):
-                import json
-                msg = "invalid info dict for %s: %s" % (alias, json.dumps(info_dict))
-                raise InternalCashewException(msg)
+            if info_dict.has_key('class'):
+                class_name = info_dict['class']
+                del info_dict['class']
+            else:
+                class_name = cls.__name__
 
-            class_name = info_dict['class']
-            del info_dict['class']
+            info_dict['aliases'] = [alias]
+            info_dict['install-dir'] = install_dir
             cls.register_plugin(alias.split("|"), class_name, info_dict)
 
     def register_plugins_from_yaml_file(cls, yaml_file):
         with open(yaml_file, 'rb') as f:
             yaml_content = yaml.safe_load(f.read())
-        cls.register_plugins_from_dict(yaml_content)
+
+        install_dir = os.path.dirname(yaml_file)
+        cls.register_plugins_from_dict(yaml_content, install_dir)
 
     def create_instance(cls, alias, *instanceargs, **instancekwargs):
         alias = cls.adjust_alias(alias)
@@ -288,7 +306,7 @@ class PluginMeta(type):
         instance.update_settings(settings)
 
         if not instance.is_active():
-            raise InactivePlugin(alias)
+            raise InactivePlugin(instance)
 
         return instance
 
@@ -308,7 +326,7 @@ class PluginMeta(type):
         called once.
         """
         processed_aliases = set()
-        for alias in sorted(cls.plugins):
+        for alias in sorted(cls.plugins, cmp=lambda x,y: cmp(x.lower(), y.lower())):
             if alias in processed_aliases:
                 # duplicate alias
                 continue

@@ -105,7 +105,7 @@ def test_no_settings_of_my_own():
 
 class OverrideFooSetting(TestSettingsBase):
     """
-    A plugin which sets a different value for foo and also defines a new setting bar.
+    Set a different value for foo and defines a new setting 'bar'.
     """
     aliases = ['overridefoosetting']
     _settings = {
@@ -168,7 +168,7 @@ def test_foo():
 def test_skip_setting_values():
     data = Data.create_instance('csv', None)
 
-    settings = ['csv-settings', 'delimiter', 'dialect', 'lineterminator', 'write-header']
+    settings = ['csv-settings', 'delimiter', 'dialect', 'install-dir', 'lineterminator', 'write-header']
     skip_settings = ['help', 'aliases']
 
     assert sorted(data.setting_values()) == sorted(settings + skip_settings)
