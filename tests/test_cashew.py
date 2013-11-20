@@ -1,5 +1,6 @@
 from cashew.plugin import Plugin, PluginMeta
 from cashew.exceptions import *
+import os
 
 import example.classes
 from example.classes2 import Csv
@@ -23,7 +24,9 @@ def test_must_inherit_from_plugin_class():
     except AssertionError as e:
         assert str(e) == "BadPlugin should inherit from class Plugin"
 
+# comment before test
 def test_standardize_alias_or_aliases():
+    "docstring for test"
     assert Data.standardize_alias_or_aliases("foo") == ['foo']
     assert Data.standardize_alias_or_aliases(["foo"]) == ['foo']
 
@@ -177,7 +180,7 @@ def test_skip_setting_values():
 def test_retrieve_environment_variables():
     data = Data.create_instance('csv', None)
     data.update_settings({ "working-dir" : ("The current working directory.", "$PWD")})
-    assert 'cashew' in data.setting('working-dir')
+    assert "/" in data.setting('working-dir')
 
 def test_error_if_no_env_var():
     data = Data.create_instance('csv', None)
