@@ -11,7 +11,8 @@ setup(
             },
         include_package_data = True,
         install_requires = [
-            "inflection"
+            'inflection>=0.2.0',
+            'PyYAML'
             ],
         name='cashew',
         packages=find_packages(),
