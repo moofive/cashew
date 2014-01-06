@@ -31,8 +31,8 @@ def test_standardize_alias_or_aliases():
     assert Data.standardize_alias_or_aliases(["foo"]) == ['foo']
 
 def test_get_reference_to_qualified_class():
-    pygments_filter_class = Data.get_reference_to_class("dexy.filters.pyg:PygmentsFilter")
-    assert pygments_filter_class.__name__ == "PygmentsFilter"
+    pygments_filter_class = Data.get_reference_to_class("datetime:date")
+    assert pygments_filter_class.__name__ == "date"
 
 def test_get_reference_to_class():
     assert Data.get_reference_to_class(Csv) == Csv
