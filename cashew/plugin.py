@@ -347,7 +347,7 @@ class PluginMeta(type):
                 instance = cls.create_instance(alias, *instanceargs)
                 instance.alias = instance.standard_alias()
                 yield(instance)
-                for alias in instance.aliases:
+                for alias in instance.setting('aliases'):
                     processed_aliases.add(alias)
 
             except InactivePlugin:
