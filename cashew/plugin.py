@@ -19,8 +19,11 @@ class Plugin(object):
     def is_active(self):
         return True
 
+    def standard_alias(self):
+        return self.setting('aliases')[0]
+
     def name(self):
-        return inflection.titleize(self.setting('aliases')[0])
+        return inflection.titleize(self.standard_alias())
 
     def initialize_settings(self, **raw_kwargs):
         self._instance_settings = {}
@@ -342,6 +345,7 @@ class PluginMeta(type):
 
             try:
                 instance = cls.create_instance(alias, *instanceargs)
+                instance.alias = instance.standard_alias()
                 yield(instance)
                 for alias in instance.aliases:
                     processed_aliases.add(alias)
