@@ -1,3 +1,10 @@
+try:
+    basestring = basestring
+except NameError:
+    # we are running in Python 3, and must manually define the basestring
+    type
+    basestring = (str,bytes)
+
 class CashewException(Exception):
     pass
 

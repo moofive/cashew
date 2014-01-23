@@ -6,6 +6,13 @@ import yaml
 
 from cashew.exceptions import *
 
+try:
+    basestring = basestring
+except NameError:
+    # we are running in Python 3, and must manually define the basestring
+    type
+    basestring = (str,bytes)
+
 class Plugin(object):
     """
     Base class for plugins. Define instance methods shared by plugins here.
