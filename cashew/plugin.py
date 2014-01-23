@@ -88,7 +88,7 @@ class Plugin(object):
 
         if hasattr(value, 'startswith') and value.startswith("$"):
             env_var = value.lstrip("$")
-            if os.environ.has_key(env_var):
+            if env_var in os.environ:
                 return os.getenv(env_var)
             else:
                 msg = "'%s' is not defined in your environment" % env_var
@@ -133,7 +133,7 @@ class Plugin(object):
         for raw_setting_name, value in new_settings.iteritems():
             setting_name = raw_setting_name.replace("_", "-")
 
-            setting_already_exists = self._instance_settings.has_key(setting_name)
+            setting_already_exists = setting_name in self._instance_settings
             value_is_list_len_2 = isinstance(value, list) and len(value) == 2
             treat_as_tuple = not setting_already_exists and value_is_list_len_2
 
@@ -141,7 +141,7 @@ class Plugin(object):
                 self._instance_settings[setting_name] = value
 
             else:
-                if not self._instance_settings.has_key(setting_name):
+                if setting_name not in self._instance_settings:
                     if enforce_helpstring:
                         msg = "You must specify param '%s' as a tuple of (helpstring, value)"
                         raise InternalCashewException(msg % setting_name)
@@ -186,7 +186,7 @@ class PluginMeta(type):
     def register_other_class_settings(cls):
         if hasattr(cls, '_other_class_settings') and cls._other_class_settings:
             for other_class_key, other_class_settings in cls._other_class_settings.iteritems():
-                if not PluginMeta._store_other_class_settings.has_key(other_class_key):
+                if other_class_key not in PluginMeta._store_other_class_settings:
                     PluginMeta._store_other_class_settings[other_class_key] = {}
 
                 PluginMeta._store_other_class_settings[other_class_key].update(other_class_settings)
@@ -197,7 +197,7 @@ class PluginMeta(type):
 
         # Ensure 'aliases' and 'help' settings are set.
         settings['aliases'] = ('aliases', aliases)
-        if not settings.has_key('help'):
+        if 'help' not in settings:
             docstring = klass.check_docstring()
             settings['help'] = ("Helpstring for plugin.", docstring)
 
@@ -282,7 +282,7 @@ class PluginMeta(type):
             if ":" in alias:
                 _, alias = alias.split(":")
 
-            if info_dict.has_key('class'):
+            if 'class' not in info_dict:
                 class_name = info_dict['class']
                 del info_dict['class']
             else:
